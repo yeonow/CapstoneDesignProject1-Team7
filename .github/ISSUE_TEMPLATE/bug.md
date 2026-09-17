@@ -1,3 +1,10 @@
+---
+name: Bug Report
+about: 프로젝트에서 발생한 오류 및 문제를 등록합니다.
+title: "[Bug] "
+labels: "bug"
+assignees: ""
+---
 ## 🐛 문제 설명
 
 <!-- 발생한 문제를 작성해주세요. -->
