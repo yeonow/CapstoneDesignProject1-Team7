@@ -87,3 +87,16 @@ class RSSIGridEnv:
             self.agent_position == self.target_position
             or self.step_count >= self.max_steps
         )
+
+    def get_info(self) -> dict[str, object]:
+        """Return ground truth for evaluation and debugging, not learning state."""
+        return {
+            "agent_position": self.agent_position,
+            "target_position": self.target_position,
+            "distance": self._calculate_distance(),
+            "step_count": self.step_count,
+            "max_steps": self.max_steps,
+            "current_rssi": self.current_rssi,
+            "success": self.agent_position == self.target_position,
+            "done": self.is_done(),
+        }
