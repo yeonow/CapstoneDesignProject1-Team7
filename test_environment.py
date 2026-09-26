@@ -1,4 +1,4 @@
-"""Standalone assert tests: run with python test_environment.py."""
+"""환경 기능을 따로 확인하는 assert 테스트다. python test_environment.py로 실행한다."""
 
 import math
 from unittest.mock import call, patch
@@ -12,8 +12,9 @@ def make_env(
     max_steps: int = 10,
     noise_std: float = 0.0,
 ) -> RSSIGridEnv:
-    # Temporary simulation test values, not established Wi-Fi measurements.
-    # Real parameters will be calibrated using Raspberry Pi / Wi-Fi adapter data.
+    """각 테스트가 같은 임시 RSSI 설정으로 환경을 만들도록 돕는다."""
+    # 아래 숫자는 동작 확인용 임시값이며 실제 Wi-Fi 측정값이 아니다.
+    # 프로젝트 설정은 Raspberry Pi와 Wi-Fi Adapter 실측 후 보정할 예정이다.
     return RSSIGridEnv(
         grid_size=6,
         max_steps=max_steps,
@@ -27,6 +28,7 @@ def make_env(
 
 
 def test_creation() -> None:
+    """객체만 만들었을 때 RSSI가 None이고, 아직 Noise도 생성하지 않았는지 확인한다."""
     with patch("environment.random.gauss") as noise:
         env = make_env()
         assert env.current_rssi is None
@@ -38,6 +40,7 @@ def test_creation() -> None:
 
 
 def test_reset() -> None:
+    """움직인 뒤 다시 시작하면 위치와 Step 수가 복원되고 초기 RSSI를 한 번 만드는지 확인한다."""
     env = make_env()
     env.reset()
     env.move(3)
@@ -53,6 +56,7 @@ def test_reset() -> None:
 
 
 def test_four_directions() -> None:
+    """Action 0, 1, 2, 3이 각각 위, 아래, 왼쪽, 오른쪽으로 한 칸 이동하는지 확인한다."""
     for action, expected in [(0, (2, 1)), (1, (2, 3)), (2, (1, 2)), (3, (3, 2))]:
         env = make_env(agent_start=(2, 2))
         env.reset()
@@ -62,8 +66,10 @@ def test_four_directions() -> None:
 
 
 def test_grid_boundaries() -> None:
+    """네 경계 밖으로 나가지 않으며, 막혀도 Step 수와 RSSI 측정은 갱신되는지 확인한다."""
     for start, action in [((2, 0), 0), ((2, 5), 1), ((0, 2), 2), ((5, 2), 3)]:
         env = make_env(agent_start=start, noise_std=2.0)
+        # Noise를 순서대로 0, 1로 정해 위치가 같아도 새 측정이 일어났는지 확인한다.
         with patch("environment.random.gauss", side_effect=[0.0, 1.0]) as noise:
             before = env.reset()
             env.move(action)
@@ -74,6 +80,7 @@ def test_grid_boundaries() -> None:
 
 
 def test_invalid_actions() -> None:
+    """잘못된 Action은 ValueError를 내고, 위치나 Step 수, RSSI는 바꾸지 않는지 확인한다."""
     env = make_env()
     env.reset()
     before = env.get_info()
@@ -90,13 +97,16 @@ def test_invalid_actions() -> None:
 
 
 def test_distance() -> None:
+    """거리를 알고 있는 (0, 0)과 (3, 4)를 사용해 직선거리가 5인지 확인한다."""
     env = make_env(agent_start=(0, 0), target_position=(3, 4))
     assert math.isclose(env._calculate_distance(), 5.0)
     assert math.isclose(env.get_info()["distance"], 5.0)
 
 
 def test_rssi_sampling() -> None:
+    """reset과 move는 각각 한 번 측정하고, 같은 Step의 반복 조회는 같은 값을 주는지 확인한다."""
     env = make_env(target_position=(5, 0), noise_std=2.0)
+    # 임의의 Noise 대신 정해진 값을 써서 계산 결과와 생성 횟수를 확실히 비교한다.
     with patch("environment.random.gauss", side_effect=[1.0, -2.0]) as noise:
         initial = env.reset()
         assert math.isclose(initial, -40.0 - 20.0 * math.log10(5.0) + 1.0)
@@ -113,9 +123,11 @@ def test_rssi_sampling() -> None:
 
 
 def test_noiseless_rssi_trend() -> None:
+    """Noise가 없을 때 Target에 가까워지면 RSSI가 더 강해지는지 확인한다."""
     env = make_env(target_position=(5, 0), noise_std=0.0)
     previous = env.reset()
-    for _ in range(3):  # Distances 4, 3, 2 all exceed reference_distance.
+    # 기준 거리 이하에서는 RSSI가 같을 수 있으므로 거리 4, 3, 2 구간만 비교한다.
+    for _ in range(3):
         env.move(3)
         current = env.get_rssi()
         assert env._calculate_distance() > env.reference_distance
@@ -124,6 +136,7 @@ def test_noiseless_rssi_trend() -> None:
 
 
 def test_target_reached() -> None:
+    """Target에 도착하면 성공과 종료가 모두 True이고, 거리 0에서도 RSSI 계산이 되는지 확인한다."""
     env = make_env(target_position=(1, 0))
     initial = env.reset()
     assert not env.is_done()
@@ -137,12 +150,14 @@ def test_target_reached() -> None:
     env.reset()
     assert not env.is_done()
     assert env.get_info()["success"] is False
+    # 처음부터 같은 위치에 있어도 reset에서 log10(0) 오류가 나면 안 된다.
     coincident = make_env(agent_start=(1, 1), target_position=(1, 1))
     assert coincident.reset() == coincident.reference_rssi
     assert coincident.is_done()
 
 
 def test_max_steps() -> None:
+    """Target에 못 도착해도 최대 Step이면 success=False, done=True로 끝나는지 확인한다."""
     env = make_env(target_position=(5, 5), max_steps=2)
     env.reset()
     env.move(3)
@@ -157,6 +172,7 @@ def test_max_steps() -> None:
 
 
 def test_get_info() -> None:
+    """평가용 정보가 현재 환경과 일치하며, 정보를 읽는 동안 새 Noise를 만들지 않는지 확인한다."""
     env = make_env()
     with patch("environment.random.gauss") as noise:
         assert env.get_info()["current_rssi"] is None
@@ -180,6 +196,7 @@ def test_get_info() -> None:
             assert info[key] == value, key
         assert info == env.get_info()
         assert noise.call_count == 0
+        # 반환된 평가 정보를 수정해도 실제 환경의 Step 수는 바뀌지 않아야 한다.
         info["step_count"] = 999
         assert env.step_count == 1
 
