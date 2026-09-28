@@ -3,7 +3,7 @@ import random
 
 
 class RSSIGridEnv:
-    """Q-Learning이 학습할 2D Grid 가상 환경
+    """Q-Learning이 탐색을 연습할 가상 2D 공간이다.
 
     Agent는 실종자를 찾는 탐색 주체이며, Target은 사전에 지정한
     스마트폰 Wi-Fi Hotspot의 위치다. 여기서는 이동, 거리, 가상 RSSI,

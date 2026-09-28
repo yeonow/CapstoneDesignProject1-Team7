@@ -1,10 +1,14 @@
-"""환경 기능을 따로 확인하는 assert 테스트다. python test_environment.py로 실행한다."""
+"""환경 기능을 따로 확인하는 assert 테스트다. 루트에서 python tests/test_environment.py로 실행한다."""
 
 import math
+import sys
+from pathlib import Path
 from unittest.mock import call, patch
 
-from environment import RSSIGridEnv
+# 파일을 직접 실행해도 src를 찾을 수 있도록 이 파일 기준의 프로젝트 루트를 추가한다.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from src.environment import RSSIGridEnv
 
 def make_env(
     agent_start: tuple[int, int] = (0, 0),
@@ -29,7 +33,7 @@ def make_env(
 
 def test_creation() -> None:
     """객체만 만들었을 때 RSSI가 None이고, 아직 Noise도 생성하지 않았는지 확인한다."""
-    with patch("environment.random.gauss") as noise:
+    with patch("src.environment.random.gauss") as noise:
         env = make_env()
         assert env.current_rssi is None
         assert env.get_rssi() is None
@@ -44,7 +48,7 @@ def test_reset() -> None:
     env = make_env()
     env.reset()
     env.move(3)
-    with patch("environment.random.gauss", return_value=0.0) as noise:
+    with patch("src.environment.random.gauss", return_value=0.0) as noise:
         rssi = env.reset()
         assert env.agent_position == env.agent_start
         assert env.step_count == 0
@@ -70,7 +74,7 @@ def test_grid_boundaries() -> None:
     for start, action in [((2, 0), 0), ((2, 5), 1), ((0, 2), 2), ((5, 2), 3)]:
         env = make_env(agent_start=start, noise_std=2.0)
         # Noise를 순서대로 0, 1로 정해 위치가 같아도 새 측정이 일어났는지 확인한다.
-        with patch("environment.random.gauss", side_effect=[0.0, 1.0]) as noise:
+        with patch("src.environment.random.gauss", side_effect=[0.0, 1.0]) as noise:
             before = env.reset()
             env.move(action)
             assert env.agent_position == start
@@ -84,7 +88,7 @@ def test_invalid_actions() -> None:
     env = make_env()
     env.reset()
     before = env.get_info()
-    with patch("environment.random.gauss") as noise:
+    with patch("src.environment.random.gauss") as noise:
         for action in (-1, 4, 99):
             try:
                 env.move(action)
@@ -107,7 +111,7 @@ def test_rssi_sampling() -> None:
     """reset과 move는 각각 한 번 측정하고, 같은 Step의 반복 조회는 같은 값을 주는지 확인한다."""
     env = make_env(target_position=(5, 0), noise_std=2.0)
     # 임의의 Noise 대신 정해진 값을 써서 계산 결과와 생성 횟수를 확실히 비교한다.
-    with patch("environment.random.gauss", side_effect=[1.0, -2.0]) as noise:
+    with patch("src.environment.random.gauss", side_effect=[1.0, -2.0]) as noise:
         initial = env.reset()
         assert math.isclose(initial, -40.0 - 20.0 * math.log10(5.0) + 1.0)
         assert initial == env.get_rssi() == env.get_rssi()
@@ -174,12 +178,12 @@ def test_max_steps() -> None:
 def test_get_info() -> None:
     """평가용 정보가 현재 환경과 일치하며, 정보를 읽는 동안 새 Noise를 만들지 않는지 확인한다."""
     env = make_env()
-    with patch("environment.random.gauss") as noise:
+    with patch("src.environment.random.gauss") as noise:
         assert env.get_info()["current_rssi"] is None
         assert noise.call_count == 0
     env.reset()
     env.move(3)
-    with patch("environment.random.gauss") as noise:
+    with patch("src.environment.random.gauss") as noise:
         info = env.get_info()
         expected = {
             "agent_position": (1, 0),
