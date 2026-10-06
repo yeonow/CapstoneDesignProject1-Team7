@@ -4,7 +4,12 @@ state_reward.py 단독 검증. `python test_state_reward.py` 로 실행.
 
 """
 
-import state_reward as sr
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src import state_reward as sr
 
 
 def test_level_boundaries():

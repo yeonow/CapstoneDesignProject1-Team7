@@ -1,6 +1,11 @@
 # test_q_learning.py
 
-from q_learning import QLearningAgent
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.q_learning import QLearningAgent
 
 
 def test_q_table_initialization():

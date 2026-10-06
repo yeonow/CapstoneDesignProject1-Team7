@@ -13,6 +13,21 @@ import config
 from src import experiment
 
 
+def test_build_agent():
+    """완성형 Agent 생성자에 config의 학습 설정과 seed를 전달하는지 확인한다."""
+    with patch.object(experiment, "QLearningAgent") as agent_class:
+        agent = experiment.build_agent()
+
+    agent_class.assert_called_once_with(
+        num_actions=4,
+        alpha=config.ALPHA,
+        gamma=config.GAMMA,
+        epsilon=config.EPSILON,
+        seed=config.RANDOM_SEED,
+    )
+    assert agent is agent_class.return_value
+
+
 def test_episode_transition():
     """State/Reward가 동일 RSSI를 쓰고 종료 Step까지 Q를 갱신하는지 확인한다."""
     real_env = experiment.build_environment()
@@ -109,12 +124,14 @@ def test_training_and_csv():
     build_agent.assert_called_once_with()
     assert env.reset.call_count == 3
     assert env.get_rssi.call_count == agent.update_q.call_count == 6
+    assert agent.decay_epsilon.call_count == 3
     assert [row["episode"] for row in results] == [1, 2, 3]
     assert all(row["steps"] == 2 and row["success"] is False for row in results)
     assert [args.args[-1] for args in agent.update_q.call_args_list] == [False, True] * 3
 
 
 if __name__ == "__main__":
+    test_build_agent()
     test_episode_transition()
     test_initially_done()
     test_training_and_csv()

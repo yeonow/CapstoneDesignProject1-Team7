@@ -1,4 +1,4 @@
-"""기존 환경, State/Reward, 임시 Agent를 연결하는 Q-Learning 학습 실행기.
+"""환경, State/Reward, Q-Learning Agent를 연결하는 학습 실행기.
 
 프로젝트 루트에서 python -m src.experiment 명령으로 실행한다.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import config
 from src.environment import RSSIGridEnv
-from src.q_learning_stub import QLearningAgent
+from src.q_learning import QLearningAgent
 from src.state_reward import calculate_reward, make_state
 
 
@@ -28,12 +28,13 @@ def build_environment():
 
 
 def build_agent():
-    """임시 Agent 생성부. 실제 구현 도입 시 import와 이 어댑터를 교체한다."""
+    """config의 학습 설정으로 Q-Learning Agent를 생성한다."""
     return QLearningAgent(
-        actions=(config.UP, config.DOWN, config.LEFT, config.RIGHT),
+        num_actions=4,
         alpha=config.ALPHA,
         gamma=config.GAMMA,
         epsilon=config.EPSILON,
+        seed=config.RANDOM_SEED,
     )
 
 
@@ -89,6 +90,7 @@ def train():
     for episode in range(1, config.NUM_EPISODES + 1):
         result = {"episode": episode, **run_episode(env, agent)}
         results.append(result)
+        agent.decay_epsilon()
         if episode % config.LOG_INTERVAL == 0 or episode == config.NUM_EPISODES:
             print(
                 f"Episode {episode}/{config.NUM_EPISODES} | "
