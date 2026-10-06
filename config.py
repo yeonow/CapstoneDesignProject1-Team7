@@ -6,6 +6,8 @@ ALPHA = 0.1
 GAMMA = 0.9
 EPSILON = 0.9
 
+EPSILON_MIN = 0.05
+EPSILON_DECAY = 0.995
 
 # =========================
 # Environment Parameters

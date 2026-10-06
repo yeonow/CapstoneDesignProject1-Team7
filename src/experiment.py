@@ -34,6 +34,8 @@ def build_agent():
         alpha=config.ALPHA,
         gamma=config.GAMMA,
         epsilon=config.EPSILON,
+        epsilon_min=config.EPSILON_MIN,
+        epsilon_decay=config.EPSILON_DECAY,
         seed=config.RANDOM_SEED,
     )
 
