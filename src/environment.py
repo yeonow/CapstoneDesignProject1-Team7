@@ -1,5 +1,6 @@
 import math
 import random
+from typing import Optional
 
 
 class RSSIGridEnv:
@@ -119,7 +120,7 @@ class RSSIGridEnv:
         noise = random.gauss(0.0, self.noise_std)
         return base_rssi + noise
 
-    def get_rssi(self) -> float | None:
+    def get_rssi(self) -> Optional[float]:
         """새 RSSI를 만들지 않고 저장된 current_rssi만 돌려준다. 측정 전에는 None이다.
 
         한 번 이동한 뒤 RSSI는 딱 한 번 만들고 current_rssi에 저장한다.
