@@ -65,6 +65,7 @@ NOISE_STD = 2.0
 # =========================
 
 NUM_EPISODES = 500
+NUM_EVAL_EPISODES = 100
 LOG_INTERVAL = 50
 RANDOM_SEED = 42
 RESULTS_DIR = "results"

@@ -41,9 +41,11 @@ def build_agent():
     )
 
 
-def select_action(agent, state):
-    """Agent의 Action 선택 인터페이스를 연결한다."""
-    return agent.choose_action(state)
+def select_action(agent, state, training=True):
+    """학습 시 epsilon-greedy, 평가 시 greedy 방식으로 Action을 선택한다."""
+    if training:
+        return agent.choose_action(state)
+    return agent.choose_action(state, training=False)
 
 
 def update_agent(agent, state, action, reward, next_state, done):
@@ -101,6 +103,37 @@ def run_episode(env, agent, reward_config=None, training=True):
         "steps": info["step_count"],
         "total_reward": total_reward,
         "final_distance": info["distance"],
+    }
+
+
+def evaluate_agent(env, agent, num_episodes, reward_config=None):
+    """학습된 Agent를 greedy 정책으로 평가하고 집계 결과를 반환한다."""
+    if num_episodes <= 0:
+        raise ValueError("num_episodes must be greater than 0.")
+
+    results = [
+        run_episode(
+            env,
+            agent,
+            reward_config=reward_config,
+            training=False,
+        )
+        for _ in range(num_episodes)
+    ]
+    successful_steps = [
+        result["steps"]
+        for result in results
+        if result["success"]
+    ]
+    failure_count = num_episodes - len(successful_steps)
+
+    return {
+        "success_rate": len(successful_steps) / num_episodes,
+        "average_steps": fmean(result["steps"] for result in results),
+        "average_steps_on_success": (
+            fmean(successful_steps) if successful_steps else None
+        ),
+        "failure_count": failure_count,
     }
 
 
