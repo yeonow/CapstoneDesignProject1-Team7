@@ -27,6 +27,7 @@ _DEFAULTS = {
     "REWARD_KEEP": 0.0,
     "REWARD_DOWN": -1.0,
     "MOVE_COST": 0.1,
+    "TERMINAL_REWARD": 0.0,
 }
 
 
@@ -102,18 +103,42 @@ def make_state(current_rssi, previous_rssi, previous_action):
 # ---------------------------------------------------------------
 # 5) Reward
 # ---------------------------------------------------------------
-def calculate_reward(current_rssi, previous_rssi):
+def calculate_reward(
+    current_rssi,
+    previous_rssi,
+    *,
+    reward_up=None,
+    reward_keep=None,
+    reward_down=None,
+    move_cost=None,
+    terminal_reward=None,
+    success=False,
+):
     """
     RSSI 변화(Trend) 기준 보상 - 이동 비용.
     첫 스텝(previous_rssi가 None)은 trend=유지로 처리되어 보상 = REWARD_KEEP - MOVE_COST.
+    success=True이면 Target 도착에 대한 terminal_reward를 추가한다.
+
+    Reward 인자를 생략하면 config.py 값을 사용하므로 기존 호출 방식도 유지된다.
     """
+    reward_up = _cfg("REWARD_UP") if reward_up is None else reward_up
+    reward_keep = _cfg("REWARD_KEEP") if reward_keep is None else reward_keep
+    reward_down = _cfg("REWARD_DOWN") if reward_down is None else reward_down
+    move_cost = _cfg("MOVE_COST") if move_cost is None else move_cost
+    terminal_reward = (
+        _cfg("TERMINAL_REWARD") if terminal_reward is None else terminal_reward
+    )
+
     trend = get_rssi_trend(current_rssi, previous_rssi)
     base = {
-        TREND_UP: _cfg("REWARD_UP"),
-        TREND_KEEP: _cfg("REWARD_KEEP"),
-        TREND_DOWN: _cfg("REWARD_DOWN"),
+        TREND_UP: reward_up,
+        TREND_KEEP: reward_keep,
+        TREND_DOWN: reward_down,
     }[trend]
-    return base - _cfg("MOVE_COST")
+    reward = base - move_cost
+    if success:
+        reward += terminal_reward
+    return reward
 
 
 # ---------------------------------------------------------------

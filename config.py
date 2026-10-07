@@ -6,6 +6,22 @@ ALPHA = 0.1
 GAMMA = 0.9
 EPSILON = 0.9
 
+EPSILON_MIN = 0.05
+EPSILON_DECAY = 0.995
+
+
+# =========================
+# Reward Parameters
+# =========================
+
+REWARD_UP = 1.0
+REWARD_KEEP = 0.0
+REWARD_DOWN = -1.0
+MOVE_COST = 0.1
+
+# Target에 도착한 마지막 이동에 추가되는 성공 보상
+TERMINAL_REWARD = 10.0
+
 
 # =========================
 # Environment Parameters
@@ -49,6 +65,7 @@ NOISE_STD = 2.0
 # =========================
 
 NUM_EPISODES = 500
+NUM_EVAL_EPISODES = 100
 LOG_INTERVAL = 50
 RANDOM_SEED = 42
 RESULTS_DIR = "results"

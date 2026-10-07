@@ -4,7 +4,12 @@ state_reward.py 단독 검증. `python test_state_reward.py` 로 실행.
 
 """
 
-import state_reward as sr
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src import state_reward as sr
 
 
 def test_level_boundaries():
@@ -39,6 +44,20 @@ def test_reward_order():
     keep = sr.calculate_reward(-65, -65)
     down = sr.calculate_reward(-72, -65)
     assert up > keep > down
+
+
+def test_explicit_reward_config_and_terminal_reward():
+    reward = sr.calculate_reward(
+        -58,
+        -65,
+        reward_up=2.0,
+        reward_keep=0.0,
+        reward_down=-2.0,
+        move_cost=0.25,
+        terminal_reward=5.0,
+        success=True,
+    )
+    assert reward == 6.75
 
 
 def test_representative():

@@ -13,6 +13,23 @@ import config
 from src import experiment
 
 
+def test_build_agent():
+    """완성형 Agent 생성자에 config의 학습 설정과 seed를 전달하는지 확인한다."""
+    with patch.object(experiment, "QLearningAgent") as agent_class:
+        agent = experiment.build_agent()
+
+    agent_class.assert_called_once_with(
+        num_actions=4,
+        alpha=config.ALPHA,
+        gamma=config.GAMMA,
+        epsilon=config.EPSILON,
+        epsilon_min=config.EPSILON_MIN,
+        epsilon_decay=config.EPSILON_DECAY,
+        seed=config.RANDOM_SEED,
+    )
+    assert agent is agent_class.return_value
+
+
 def test_episode_transition():
     """State/Reward가 동일 RSSI를 쓰고 종료 Step까지 Q를 갱신하는지 확인한다."""
     real_env = experiment.build_environment()
@@ -38,8 +55,13 @@ def test_episode_transition():
     initial = experiment.make_state(-65.0, None, config.NONE_ACTION)
     middle = experiment.make_state(-61.0, -65.0, config.RIGHT)
     final = experiment.make_state(-64.0, -61.0, config.RIGHT)
-    first_reward = experiment.calculate_reward(-61.0, -65.0)
-    last_reward = experiment.calculate_reward(-64.0, -61.0)
+    reward_config = experiment.get_reward_config()
+    first_reward = experiment.calculate_reward(
+        -61.0, -65.0, success=False, **reward_config
+    )
+    last_reward = experiment.calculate_reward(
+        -64.0, -61.0, success=True, **reward_config
+    )
     assert events.mock_calls == [
         call.env.reset(),
         call.state(-65.0, None, config.NONE_ACTION),
@@ -48,17 +70,17 @@ def test_episode_transition():
         call.env.move(config.RIGHT),
         call.env.get_rssi(),
         call.state(-61.0, -65.0, config.RIGHT),
-        call.reward(-61.0, -65.0),
         call.env.is_done(),
+        call.reward(-61.0, -65.0, success=False, **reward_config),
         call.agent.update_q(initial, config.RIGHT, first_reward, middle, False),
         call.agent.choose_action(middle),
         call.env.move(config.RIGHT),
         call.env.get_rssi(),
         call.state(-64.0, -61.0, config.RIGHT),
-        call.reward(-64.0, -61.0),
         call.env.is_done(),
-        call.agent.update_q(middle, config.RIGHT, last_reward, final, True),
         call.env.get_info(),
+        call.reward(-64.0, -61.0, success=True, **reward_config),
+        call.agent.update_q(middle, config.RIGHT, last_reward, final, True),
     ]
     assert result["success"] is True
     assert result["steps"] == 2
@@ -76,6 +98,61 @@ def test_initially_done():
         "success": True, "steps": 0, "total_reward": 0.0, "final_distance": 0.0,
     }
     assert agent.mock_calls == []
+
+
+def test_evaluation_episode_uses_greedy_policy_without_learning():
+    """평가에서는 exploration, Q 업데이트, epsilon decay를 수행하지 않는다."""
+    env = experiment.build_environment()
+    env.agent_start = (0, 0)
+    env.target_position = (2, 0)
+    env.max_steps = 5
+    agent = Mock()
+    agent.choose_action.return_value = config.RIGHT
+
+    with patch.object(env, "_generate_rssi", side_effect=[-65.0, -61.0, -64.0]):
+        result = experiment.run_episode(env, agent, training=False)
+
+    initial = experiment.make_state(-65.0, None, config.NONE_ACTION)
+    middle = experiment.make_state(-61.0, -65.0, config.RIGHT)
+    assert agent.choose_action.call_args_list == [
+        call(initial, training=False),
+        call(middle, training=False),
+    ]
+    agent.update_q.assert_not_called()
+    agent.decay_epsilon.assert_not_called()
+    assert result["success"] is True
+    assert result["steps"] == 2
+
+
+def test_evaluate_agent_metrics():
+    """평가 결과에서 성공률, 평균 Step, 성공 Step, 실패 수를 계산한다."""
+    env = Mock()
+    agent = Mock()
+    episode_results = [
+        {"success": True, "steps": 4},
+        {"success": False, "steps": 10},
+        {"success": True, "steps": 6},
+    ]
+
+    with patch.object(
+        experiment,
+        "run_episode",
+        side_effect=episode_results,
+    ) as run_episode:
+        result = experiment.evaluate_agent(env, agent, 3)
+
+    assert run_episode.call_args_list == [
+        call(env, agent, reward_config=None, training=False),
+        call(env, agent, reward_config=None, training=False),
+        call(env, agent, reward_config=None, training=False),
+    ]
+    agent.decay_epsilon.assert_not_called()
+    assert result == {
+        "success_rate": 2 / 3,
+        "average_steps": 20 / 3,
+        "average_steps_on_success": 5.0,
+        "failure_count": 1,
+    }
 
 
 def test_training_and_csv():
@@ -109,13 +186,17 @@ def test_training_and_csv():
     build_agent.assert_called_once_with()
     assert env.reset.call_count == 3
     assert env.get_rssi.call_count == agent.update_q.call_count == 6
+    assert agent.decay_epsilon.call_count == 3
     assert [row["episode"] for row in results] == [1, 2, 3]
     assert all(row["steps"] == 2 and row["success"] is False for row in results)
     assert [args.args[-1] for args in agent.update_q.call_args_list] == [False, True] * 3
 
 
 if __name__ == "__main__":
+    test_build_agent()
     test_episode_transition()
     test_initially_done()
+    test_evaluation_episode_uses_greedy_policy_without_learning()
+    test_evaluate_agent_metrics()
     test_training_and_csv()
     print("All experiment tests passed.")
