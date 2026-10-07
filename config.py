@@ -9,6 +9,20 @@ EPSILON = 0.9
 EPSILON_MIN = 0.05
 EPSILON_DECAY = 0.995
 
+
+# =========================
+# Reward Parameters
+# =========================
+
+REWARD_UP = 1.0
+REWARD_KEEP = 0.0
+REWARD_DOWN = -1.0
+MOVE_COST = 0.1
+
+# Target에 도착한 마지막 이동에 추가되는 성공 보상
+TERMINAL_REWARD = 10.0
+
+
 # =========================
 # Environment Parameters
 # =========================

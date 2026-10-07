@@ -6,6 +6,7 @@
 import csv
 import random
 from pathlib import Path
+from statistics import fmean
 
 import config
 from src.environment import RSSIGridEnv
@@ -50,30 +51,51 @@ def update_agent(agent, state, action, reward, next_state, done):
     agent.update_q(state, action, reward, next_state, done)
 
 
-def run_episode(env, agent):
-    """Episode 한 번을 학습하고 평가용 결과를 반환한다."""
+def get_reward_config():
+    """config.py의 Reward 설정을 calculate_reward 인자 형식으로 반환한다."""
+    return {
+        "reward_up": config.REWARD_UP,
+        "reward_keep": config.REWARD_KEEP,
+        "reward_down": config.REWARD_DOWN,
+        "move_cost": config.MOVE_COST,
+        "terminal_reward": config.TERMINAL_REWARD,
+    }
+
+
+def run_episode(env, agent, reward_config=None, training=True):
+    """학습 또는 평가 Episode 한 번을 실행하고 결과를 반환한다."""
+    reward_config = get_reward_config() if reward_config is None else reward_config
     current_rssi = env.reset()
     state = make_state(current_rssi, None, config.NONE_ACTION)
     total_reward = 0.0
+    terminal_info = None
     # 시작부터 Target에 있거나 Step 한도에 도달했다면 이동하지 않는다.
     done = env.is_done()
 
     while not done:
-        action = select_action(agent, state)
+        action = select_action(agent, state, training=training)
         env.move(action)
         # 이동당 한 번 조회한 RSSI를 State와 Reward가 함께 사용한다.
         new_rssi = env.get_rssi()
         next_state = make_state(new_rssi, current_rssi, action)
-        reward = calculate_reward(new_rssi, current_rssi)
         done = env.is_done()
-        update_agent(agent, state, action, reward, next_state, done)
+        if done:
+            terminal_info = env.get_info()
+        reward = calculate_reward(
+            new_rssi,
+            current_rssi,
+            success=bool(terminal_info and terminal_info["success"]),
+            **reward_config,
+        )
+        if training:
+            update_agent(agent, state, action, reward, next_state, done)
 
         total_reward += reward
         state = next_state
         current_rssi = new_rssi
 
     # Ground Truth는 학습 State에 넣지 않고 종료 후 평가에만 사용한다.
-    info = env.get_info()
+    info = terminal_info if terminal_info is not None else env.get_info()
     return {
         "success": info["success"],
         "steps": info["step_count"],
