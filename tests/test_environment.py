@@ -64,8 +64,9 @@ def test_four_directions() -> None:
     for action, expected in [(0, (2, 1)), (1, (2, 3)), (2, (1, 2)), (3, (3, 2))]:
         env = make_env(agent_start=(2, 2))
         env.reset()
-        env.move(action)
+        assert env.move(action) is False
         assert env.agent_position == expected
+        assert env.get_info()["blocked"] is False
         assert env.step_count == 1
 
 
@@ -76,8 +77,9 @@ def test_grid_boundaries() -> None:
         # Noise를 순서대로 0, 1로 정해 위치가 같아도 새 측정이 일어났는지 확인한다.
         with patch("src.environment.random.gauss", side_effect=[0.0, 1.0]) as noise:
             before = env.reset()
-            env.move(action)
+            assert env.move(action) is True
             assert env.agent_position == start
+            assert env.get_info()["blocked"] is True
             assert env.step_count == 1
             assert env.get_rssi() == before + 1.0
             assert noise.call_count == 2

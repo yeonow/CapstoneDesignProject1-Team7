@@ -57,10 +57,10 @@ def test_episode_transition():
     final = experiment.make_state(-64.0, -61.0, config.RIGHT)
     reward_config = experiment.get_reward_config()
     first_reward = experiment.calculate_reward(
-        -61.0, -65.0, success=False, **reward_config
+        -61.0, -65.0, success=False, blocked=False, **reward_config
     )
     last_reward = experiment.calculate_reward(
-        -64.0, -61.0, success=True, **reward_config
+        -64.0, -61.0, success=True, blocked=False, **reward_config
     )
     assert events.mock_calls == [
         call.env.reset(),
@@ -71,7 +71,7 @@ def test_episode_transition():
         call.env.get_rssi(),
         call.state(-61.0, -65.0, config.RIGHT),
         call.env.is_done(),
-        call.reward(-61.0, -65.0, success=False, **reward_config),
+        call.reward(-61.0, -65.0, success=False, blocked=False, **reward_config),
         call.agent.update_q(initial, config.RIGHT, first_reward, middle, False),
         call.agent.choose_action(middle),
         call.env.move(config.RIGHT),
@@ -79,7 +79,7 @@ def test_episode_transition():
         call.state(-64.0, -61.0, config.RIGHT),
         call.env.is_done(),
         call.env.get_info(),
-        call.reward(-64.0, -61.0, success=True, **reward_config),
+        call.reward(-64.0, -61.0, success=True, blocked=False, **reward_config),
         call.agent.update_q(middle, config.RIGHT, last_reward, final, True),
     ]
     assert result["success"] is True
