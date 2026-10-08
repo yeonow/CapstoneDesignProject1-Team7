@@ -76,7 +76,8 @@ def run_episode(env, agent, reward_config=None, training=True):
 
     while not done:
         action = select_action(agent, state, training=training)
-        env.move(action)
+        # 경계에 막힌 Action인지 Reward 계산에 함께 전달한다.
+        blocked = env.move(action)
         # 이동당 한 번 조회한 RSSI를 State와 Reward가 함께 사용한다.
         new_rssi = env.get_rssi()
         next_state = make_state(new_rssi, current_rssi, action)
@@ -87,6 +88,7 @@ def run_episode(env, agent, reward_config=None, training=True):
             new_rssi,
             current_rssi,
             success=bool(terminal_info and terminal_info["success"]),
+            blocked=blocked,
             **reward_config,
         )
         if training:

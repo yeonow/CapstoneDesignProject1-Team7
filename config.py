@@ -22,6 +22,12 @@ MOVE_COST = 0.1
 # Target에 도착한 마지막 이동에 추가되는 성공 보상
 TERMINAL_REWARD = 10.0
 
+# Grid 경계에 막혀 제자리에 있었던 Action 처리
+# 기본값은 일반 Action과 동일하게 처리한다. (Step +1, RSSI 재측정, Previous Action = 시도한 Action)
+BLOCKED_APPLY_MOVE_COST = True   # False: 실제로 이동한 경우에만 MOVE_COST 적용
+BLOCKED_TREND_KEEP = False       # True: 막혔을 때 Noise와 관계없이 Trend를 KEEP으로 처리
+BLOCKED_PENALTY = 0.0            # 막힌 Action에 추가로 주는 penalty (0 이상)
+
 
 # =========================
 # Environment Parameters

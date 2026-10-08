@@ -50,6 +50,7 @@ class RSSIGridEnv:
         self.path_loss_exponent = path_loss_exponent
         self.noise_std = noise_std
         self.current_rssi: float | None = None
+        self.last_move_blocked = False
 
     def reset(self) -> float:
         """Episode를 처음부터 다시 시작할 때 Agent를 시작 위치로 되돌린다.
@@ -59,16 +60,18 @@ class RSSIGridEnv:
         """
         self.agent_position = self.agent_start
         self.step_count = 0
+        self.last_move_blocked = False
         self.current_rssi = self._generate_rssi()
         return self.current_rssi
 
-    def move(self, action: int) -> None:
+    def move(self, action: int) -> bool:
         """Q-Learning이 선택한 방향으로 Agent를 한 칸 움직인다.
 
         Action은 0=위(y-1), 1=아래(y+1), 2=왼쪽(x-1), 3=오른쪽(x+1)이다.
         Grid 밖으로 나가려 하면 위치는 그대로 둔다. 그래도 Action은 수행했으므로
         step_count를 늘리고 같은 위치에서 RSSI를 한 번 새로 측정한다.
         잘못된 Action 번호는 ValueError를 발생시킨다.
+        경계에 막혀 제자리에 있었으면 True(blocked), 실제로 이동했으면 False를 반환한다.
         """
         x, y = self.agent_position
 
@@ -83,11 +86,14 @@ class RSSIGridEnv:
         else:
             raise ValueError("action must be 0 (UP), 1 (DOWN), 2 (LEFT), or 3 (RIGHT)")
 
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+        blocked = not (0 <= x < self.grid_size and 0 <= y < self.grid_size)
+        if not blocked:
             self.agent_position = (x, y)
 
         self.step_count += 1
+        self.last_move_blocked = blocked
         self.current_rssi = self._generate_rssi()
+        return blocked
 
     def _calculate_distance(self) -> float:
         """Agent와 Target이 얼마나 떨어져 있는지 내부 위치 정보로 계산한다.
@@ -145,6 +151,7 @@ class RSSIGridEnv:
         success는 Target에 실제로 도착했는지, done은 Episode가 끝났는지를 뜻한다.
         Target 도착 시에는 success=True, done=True이고,
         도착하지 못한 채 최대 Step으로 끝나면 success=False, done=True다.
+        blocked는 직전 Action이 Grid 경계에 막혀 제자리에 있었는지를 뜻한다.
         """
         return {
             "agent_position": self.agent_position,
@@ -155,4 +162,5 @@ class RSSIGridEnv:
             "current_rssi": self.current_rssi,
             "success": self.agent_position == self.target_position,
             "done": self.is_done(),
+            "blocked": self.last_move_blocked,
         }

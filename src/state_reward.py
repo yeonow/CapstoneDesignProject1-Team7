@@ -28,6 +28,10 @@ _DEFAULTS = {
     "REWARD_DOWN": -1.0,
     "MOVE_COST": 0.1,
     "TERMINAL_REWARD": 0.0,
+    # Grid 경계에 막힌 Action 처리 (기본값 = 일반 Action과 동일하게 처리)
+    "BLOCKED_APPLY_MOVE_COST": True,   # 막혀도 MOVE_COST 적용
+    "BLOCKED_TREND_KEEP": False,       # True면 막혔을 때 Trend를 KEEP으로 고정
+    "BLOCKED_PENALTY": 0.0,            # 막혔을 때 추가로 빼는 값 (0 이상)
 }
 
 
@@ -113,11 +117,21 @@ def calculate_reward(
     move_cost=None,
     terminal_reward=None,
     success=False,
+    blocked=False,
+    blocked_apply_move_cost=None,
+    blocked_trend_keep=None,
+    blocked_penalty=None,
 ):
     """
     RSSI 변화(Trend) 기준 보상 - 이동 비용.
     첫 스텝(previous_rssi가 None)은 trend=유지로 처리되어 보상 = REWARD_KEEP - MOVE_COST.
     success=True이면 Target 도착에 대한 terminal_reward를 추가한다.
+
+    blocked=True는 Grid 경계에 막혀 제자리에 있었던 Action을 뜻한다.
+    - blocked_apply_move_cost: False면 막힌 Action에는 MOVE_COST를 빼지 않는다.
+    - blocked_trend_keep: True면 Noise로 바뀐 RSSI와 관계없이 Trend를 KEEP으로 본다.
+    - blocked_penalty: 막힌 Action에 추가로 빼는 값.
+    기본값은 일반 Action과 동일한 처리라서 blocked를 넘겨도 결과가 같다.
 
     Reward 인자를 생략하면 config.py 값을 사용하므로 기존 호출 방식도 유지된다.
     """
@@ -129,13 +143,27 @@ def calculate_reward(
         _cfg("TERMINAL_REWARD") if terminal_reward is None else terminal_reward
     )
 
-    trend = get_rssi_trend(current_rssi, previous_rssi)
+    if blocked_apply_move_cost is None:
+        blocked_apply_move_cost = _cfg("BLOCKED_APPLY_MOVE_COST")
+    if blocked_trend_keep is None:
+        blocked_trend_keep = _cfg("BLOCKED_TREND_KEEP")
+    if blocked_penalty is None:
+        blocked_penalty = _cfg("BLOCKED_PENALTY")
+
+    if blocked and blocked_trend_keep:
+        trend = TREND_KEEP
+    else:
+        trend = get_rssi_trend(current_rssi, previous_rssi)
     base = {
         TREND_UP: reward_up,
         TREND_KEEP: reward_keep,
         TREND_DOWN: reward_down,
     }[trend]
-    reward = base - move_cost
+    reward = base
+    if not blocked or blocked_apply_move_cost:
+        reward -= move_cost
+    if blocked:
+        reward -= blocked_penalty
     if success:
         reward += terminal_reward
     return reward
