@@ -206,6 +206,31 @@ def test_get_info() -> None:
         info["step_count"] = 999
         assert env.step_count == 1
 
+def test_reproducibility_with_same_seed() -> None:
+    """같은 Seed, 환경 설정, Action 순서에서는 같은 결과가 재현되는지 확인한다."""
+    import random
+
+    actions = [3, 3, 1, 1, 2, 0]
+
+    random.seed(42)
+    env1 = make_env(noise_std=2.0)
+    rssi1 = [env1.reset()]
+
+    for action in actions:
+        env1.move(action)
+        rssi1.append(env1.get_rssi())
+
+    random.seed(42)
+    env2 = make_env(noise_std=2.0)
+    rssi2 = [env2.reset()]
+
+    for action in actions:
+        env2.move(action)
+        rssi2.append(env2.get_rssi())
+
+    assert rssi1 == rssi2
+    assert env1.agent_position == env2.agent_position
+    assert env1.step_count == env2.step_count
 
 if __name__ == "__main__":
     test_creation()
