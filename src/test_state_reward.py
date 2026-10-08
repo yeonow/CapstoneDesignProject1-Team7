@@ -60,6 +60,31 @@ def test_explicit_reward_config_and_terminal_reward():
     assert reward == 6.75
 
 
+def test_blocked_default_matches_normal_action():
+    """기본 설정에서는 막힌 Action도 일반 Action과 같은 Reward를 받는다."""
+    for current in (-58, -65, -72):
+        assert sr.calculate_reward(current, -65, blocked=True) == sr.calculate_reward(current, -65)
+
+
+def test_blocked_options():
+    kwargs = dict(reward_up=1.0, reward_keep=0.0, reward_down=-1.0, move_cost=0.1)
+    # Noise로 RSSI가 올라가도 Trend를 KEEP으로 보면 REWARD_KEEP만 받는다.
+    assert sr.calculate_reward(
+        -58, -65, blocked=True, blocked_trend_keep=True, **kwargs
+    ) == -0.1
+    # MOVE_COST를 실제 이동에만 적용하면 막힌 Action에는 빼지 않는다.
+    assert sr.calculate_reward(
+        -65, -65, blocked=True, blocked_apply_move_cost=False, **kwargs
+    ) == 0.0
+    # blocked penalty는 막힌 Action에만 추가된다.
+    assert sr.calculate_reward(
+        -65, -65, blocked=True, blocked_penalty=0.5, **kwargs
+    ) == -0.6
+    assert sr.calculate_reward(
+        -65, -65, blocked=False, blocked_penalty=0.5, **kwargs
+    ) == -0.1
+
+
 def test_representative():
     assert sr.get_representative_rssi(-60) == -60.0
     assert sr.get_representative_rssi([-60, -61, -90]) == -61.0   # 튀는 값에 강함
