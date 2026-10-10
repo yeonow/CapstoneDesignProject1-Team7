@@ -3,9 +3,12 @@
 import csv
 import math
 import sys
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, call, patch
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -155,6 +158,47 @@ def test_evaluate_agent_metrics():
     }
 
 
+def _build_evaluation_integrity_case():
+    env = experiment.build_environment()
+    env.agent_start = (0, 0)
+    env.target_position = (2, 2)
+    env.max_steps = 2
+    agent = experiment.build_agent()
+    initial = experiment.make_state(-65.0, None, config.NONE_ACTION)
+    learned_next = experiment.make_state(-61.0, -65.0, config.RIGHT)
+    agent.update_q(initial, config.RIGHT, 10.0, learned_next, False)
+    agent.decay_epsilon()
+    unseen = experiment.make_state(-45.0, -65.0, config.RIGHT)
+    assert unseen not in agent.q_table
+    return env, agent
+
+
+def test_evaluate_agent_preserves_epsilon():
+    """실제 학습된 Agent의 epsilon은 여러 평가 Episode 후에도 정확히 같다."""
+    env, agent = _build_evaluation_integrity_case()
+    epsilon_before = agent.epsilon
+
+    with patch.object(env, "_generate_rssi", side_effect=[-65.0, -45.0, -45.0] * 3):
+        result = experiment.evaluate_agent(env, agent, 3)
+
+    assert result["average_steps"] == 2.0
+    assert epsilon_before == agent.epsilon
+
+
+def test_evaluate_agent_preserves_q_table():
+    """기존 Q-value뿐 아니라 처음 보는 State의 key도 평가 중 추가하지 않는다."""
+    env, agent = _build_evaluation_integrity_case()
+    q_table_before = deepcopy(agent.q_table)
+
+    with patch.object(env, "_generate_rssi", side_effect=[-65.0, -45.0, -45.0] * 3):
+        result = experiment.evaluate_agent(env, agent, 3)
+
+    assert result["average_steps"] == 2.0
+    assert set(q_table_before) == set(agent.q_table)
+    for state, q_values in q_table_before.items():
+        np.testing.assert_array_equal(q_values, agent.q_table[state])
+
+
 def test_training_and_csv():
     """Episode별 reset, 최대 Step 종료, Agent 재사용 및 CSV 내용을 확인한다."""
     real_env = experiment.build_environment()
@@ -198,5 +242,7 @@ if __name__ == "__main__":
     test_initially_done()
     test_evaluation_episode_uses_greedy_policy_without_learning()
     test_evaluate_agent_metrics()
+    test_evaluate_agent_preserves_epsilon()
+    test_evaluate_agent_preserves_q_table()
     test_training_and_csv()
     print("All experiment tests passed.")

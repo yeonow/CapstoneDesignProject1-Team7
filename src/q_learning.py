@@ -165,16 +165,18 @@ class QLearningAgent:
 
         training=False:
             Exploration 없이 가장 높은 Q-value만 선택
+            처음 보는 State는 Q-table에 저장하지 않고 zero Q-values 사용
         """
 
-        self._ensure_state(state)
+        if training:
+            self._ensure_state(state)
 
         if training and self.random.random() < self.epsilon:
             return self.random.randrange(self.num_actions)
 
-        return self._greedy_action(state)
+        return self._greedy_action(state, ensure_state=training)
 
-    def _greedy_action(self, state: Hashable) -> int:
+    def _greedy_action(self, state: Hashable, ensure_state: bool = True) -> int:
         """
         가장 높은 Q-value를 가진 Action을 선택한다.
 
@@ -182,9 +184,12 @@ class QLearningAgent:
         한쪽 Action에 편향되지 않도록 Random하게 선택한다.
         """
 
-        self._ensure_state(state)
+        if ensure_state:
+            self._ensure_state(state)
 
-        q_values = self.q_table[state]
+        q_values = self.q_table.get(state)
+        if q_values is None:
+            q_values = np.zeros(self.num_actions, dtype=np.float64)
 
         max_q = np.max(q_values)
 
