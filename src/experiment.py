@@ -14,8 +14,8 @@ from src.q_learning import QLearningAgent
 from src.state_reward import calculate_reward, make_state
 
 
-def build_environment():
-    """config의 환경 및 Simulation 설정으로 환경을 생성한다."""
+def build_environment(noise_std=None):
+    """config 설정과 선택적 Noise override로 환경을 생성한다."""
     return RSSIGridEnv(
         grid_size=config.GRID_SIZE,
         max_steps=config.MAX_STEPS,
@@ -24,12 +24,12 @@ def build_environment():
         reference_rssi=config.REFERENCE_RSSI,
         reference_distance=config.REFERENCE_DISTANCE,
         path_loss_exponent=config.PATH_LOSS_EXPONENT,
-        noise_std=config.NOISE_STD,
+        noise_std=config.NOISE_STD if noise_std is None else noise_std,
     )
 
 
-def build_agent():
-    """config의 학습 설정으로 Q-Learning Agent를 생성한다."""
+def build_agent(seed=None):
+    """config 학습 설정과 선택적 Seed override로 Agent를 생성한다."""
     return QLearningAgent(
         num_actions=4,
         alpha=config.ALPHA,
@@ -37,7 +37,7 @@ def build_agent():
         epsilon=config.EPSILON,
         epsilon_min=config.EPSILON_MIN,
         epsilon_decay=config.EPSILON_DECAY,
-        seed=config.RANDOM_SEED,
+        seed=config.RANDOM_SEED if seed is None else seed,
     )
 
 
