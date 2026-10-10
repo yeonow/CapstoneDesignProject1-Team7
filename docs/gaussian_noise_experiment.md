@@ -93,9 +93,12 @@ trajectory 기록을 별도로 추가해야 한다.
 
 ## 7. 산출물과 재실행
 
-- Seed별 결과: [`results/noise_sweep_runs.csv`](../results/noise_sweep_runs.csv)
-- Noise별 집계: [`results/noise_sweep_summary.csv`](../results/noise_sweep_summary.csv)
-- 비교 그래프: [`results/noise_sweep_summary.png`](../results/noise_sweep_summary.png)
+- Seed별 결과: [`experiments/gaussian_noise/noise_sweep_runs.csv`](../experiments/gaussian_noise/noise_sweep_runs.csv)
+- Noise별 집계: [`experiments/gaussian_noise/noise_sweep_summary.csv`](../experiments/gaussian_noise/noise_sweep_summary.csv)
+- 비교 그래프: [`experiments/gaussian_noise/noise_sweep_summary.png`](../experiments/gaussian_noise/noise_sweep_summary.png)
+
+위 파일은 `results/`의 기존 산출물을 복사한 공유용 결과다. 아래 재실행 명령은
+`results/`에 출력하므로 공유용 결과를 덮어쓰지 않는다.
 
 ```bash
 python3 -m src.experiment_noise_sweep \
