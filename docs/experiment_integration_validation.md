@@ -275,3 +275,159 @@ python -c "from pathlib import Path; text=Path('docs/experiment_integration_vali
 - 미확인: 기본 500회 학습/100회 평가의 정식 성능, 다른 seed의 성능 분포, 다른 Python/의존성 버전의 비트 단위 재현성, 실제 RSSI 장비에서의 결과.
 - 기존 제한: 평가 중 Agent 난수 상태는 바뀐다. 최종 CSV만으로 모든 환경·학습 설정을 복원할 수 없으므로 검증 HEAD, 위 Snapshot, 명령과 함께 사용한다.
 - 이후 Environment / State / Reward / Q-Learning 변경 시 같은 검산을 다시 수행한다. 이번 기록만으로 최종 알고리즘 성능을 주장하지 않는다.
+
+## 9. 최종 Integration Check — 5단계
+
+### 현재 코드 버전과 전체 테스트
+
+- 검증 날짜: 2026-10-10 (Asia/Seoul)
+- Branch: `feature/experiment-integration`
+- 검증 HEAD: `1a4e95aa76738835dc3fda3d0df3b8540c021d30`
+- 시작 작업 트리: clean, Python 3.12.10
+- 변경 전 전체 테스트: 총 52개, 통과 52개, 실패 0개, pytest 실행 시간 2.74초.
+- 문서 수정 후 최종 전체 테스트: 총 52개, 통과 52개, 실패 0개, pytest 실행 시간 0.60초.
+- 실행 명령: 3절의 동일 PowerShell 환경 설정 후 `pytest -q`.
+
+현재 HEAD와 4단계 실행 HEAD `ca1d4e4` 사이의 `git diff -- src config.py`는 비어 있다. 차이는 이 검증 문서와 `tests/test_reproducibility.py` 추가뿐이다. 따라서 **4단계 Smoke/통계 검산 결과를 재사용**했으며 이번에는 별도 CLI Smoke를 반복하지 않았다. 보관된 `episode_verification.json`의 검증 HEAD와 성공한 검산 항목도 확인했다. 새로 실행한 전체 테스트에는 실제 환경/Agent를 사용하는 짧은 학습·평가·Sweep·CSV 테스트가 포함된다. 아래 상태는 현재 코드의 Integration 회귀 검증이며 최종 성능 평가가 아니다.
+
+### Experiment 주요 검증 상태
+
+| 항목 | 상태 | 현재 HEAD의 근거 |
+| --- | --- | --- |
+| Evaluation Q-value·key 불변 | Pass | test_evaluate_agent_preserves_q_table, 최종 경로의 실제 배열 비교 |
+| Evaluation epsilon 불변 | Pass | test_evaluate_agent_preserves_epsilon, 최종 경로의 epsilon 비교 |
+| Evaluation Q update·epsilon decay 없음 | Pass | test_evaluation_episode_uses_greedy_policy_without_learning, 최종 경로 호출 검사 |
+| Reward Sweep Agent·Q-table·epsilon 독립 | Pass | test_reward_combinations_start_with_independent_agents_and_equal_conditions |
+| Reward 외 환경·학습 조건 동일 | Pass | 위 테스트의 실제 객체 설정·Episode 횟수·초기 RNG 검사 |
+| 동일 seed 재현성·조합 순서 독립 | Pass | test_sweep_is_reproducible_with_same_seed_and_independent_of_order |
+| Sweep 종료 후 config 불변 | Pass | 정상 경로 Snapshot, 학습/평가 예외 시 config 불변 테스트; config를 변경하지 않는 구현 |
+| Final 동일 학습 Agent 평가·summary·CSV | Pass | test_final_experiment_reuses_trained_agent_without_learning_in_evaluation |
+| 새 Final 실행 초기화·재현성·덮어쓰기 | Pass | test_final_experiment_restarts_reproducibly_and_overwrites_csv |
+| 성공/실패 합계·성공률·평균 | Pass | test_evaluate_agent_metrics 및 Final CSV/summary 검사; 4단계 raw 검산 재사용 |
+| 성공 0건의 평균 결측 처리 | Pass | Sweep/Final 저장 테스트: None → CSV 빈 값 |
+| Action·Q-table·학습 결과·평가 결과 재현성 | Pass | tests/test_reproducibility.py의 5개 테스트 |
+
+전체 평균 Step에는 실패 Episode도 포함한다. `success_count + failure_count = eval_episodes`, `success_rate = success_count / eval_episodes`이며 성공률 단위는 0~1이다. Q-table/epsilon 불변은 난수 상태 불변을 의미하지 않는다. 평가의 `random.choice()`는 Agent RNG를 소비한다.
+
+### Baseline 구현 현황 — 코드에서 확인한 사실
+
+저장소 전체의 파일 목록과 `greedy|baseline|random|RSSI|compare|evaluation|policy` 검색 결과를 확인하고, 각 일치 항목의 구현 및 import 경로를 읽었다. 검색 결과가 있다는 사실만으로 구현 완료로 분류하지 않았다.
+
+| 방법 | 구현 상태 | 위치 | 실제 의미 |
+| --- | --- | --- | --- |
+| Q-Learning | 구현 완료, 통합 실행 연결됨 | src/q_learning.py의 QLearningAgent; experiment.py, experiment_sweep.py, final_evaluation.py | 실제 tabular Q-learning 학습 후 Q-table greedy 평가 |
+| Greedy RSSI baseline | 미구현 | 실행 클래스/함수/runner 없음; 설계안 15절에 RSSI Gradient Search 개념만 있음 | 현재 Q값 최대화 policy는 RSSI를 직접 비교하는 baseline이 아님 |
+| Random baseline | 미구현 | 독립 policy/평가 진입점 없음; 설계안에 향후 비교 방식으로 언급 | Agent exploration 및 stub의 random.choice는 baseline이 아님 |
+
+`src/q_learning_stub.py`는 Q-table을 사용하는 임시 epsilon-greedy Agent이고 현재 Experiment에서 import하지 않는다. `experiment_sweep.py`의 baseline은 기본 **Reward 조합 이름**이다. `plot_sweep.py`의 baseline 표시도 해당 조합의 CSV를 그리며 별도 알고리즘을 실행하지 않는다.
+
+설계안의 Gradient 개념은 최근 이동 결과 또는 주변 탐색으로 RSSI 증가 방향을 찾고, 증가하면 방향을 유지하며 감소하면 다른 방향을 탐색하는 예시다. 방향 선택/탐색 비용을 모두 확정한 실행 명세나 구현은 아니다.
+
+### Greedy RSSI 비교 전 규칙과 팀 합의
+
+“확정됨”은 현재 코드 또는 문서에 명시된 범위만 뜻한다. 기존 공통 환경 규칙을 미구현 baseline 자체의 동작으로 단정하지 않는다.
+
+| 항목 | 상태 | 확인한 정의 / 합의할 내용 |
+| --- | --- | --- |
+| 1. 이동 가능한 방향 | 확정됨: 공통 행동 공간 | 0=UP(y−1), 1=DOWN(y+1), 2=LEFT(x−1), 3=RIGHT(x+1) |
+| 2. 방향별 RSSI 획득 | 팀 합의 필요 | 현재 API는 현재 위치 RSSI만 제공; 이동 이력 사용 또는 주변 탐색 중 구체적인 방법 미정 |
+| 3. 선택 전 여러 방향 측정 | 팀 합의 필요 | 모든 방향 사전 측정을 보장하는 API/정책 없음 |
+| 4. 측정하려면 실제 이동하는지 | 현재 API는 확정됨; baseline 탐색 절차는 합의 필요 | move() 후 새 RSSI 생성; 이웃 좌표의 신호를 무상 조회하는 public API 없음 |
+| 5. 측정 후 원위치 복귀 | 팀 합의 필요 | 복귀 허용 여부와 복귀 이동/측정 비용 미정 |
+| 6. Step당 측정 횟수 | 현재 Simulation은 확정됨; baseline 예산은 합의 필요 | reset 1회, Action 시도당 1회 생성, get_rssi는 추가 측정 없음 |
+| 7. Noise에서 반복 측정 여부 | 팀 합의 필요 | Simulation은 단일 샘플; 설계안은 실측 반복 측정 제안이며 횟수 미정 |
+| 8. 반복 측정 대표값 | 도구 구현은 확정됨; 비교 정책은 합의 필요 | get_representative_rssi는 다중 샘플의 중앙값; Experiment는 이를 직접 호출하지 않음. 설계안의 실측 대표값 선택은 미정 |
+| 9. RSSI 동률 처리 | 팀 합의 필요 | Q값 동률의 random.choice 규칙을 RSSI baseline으로 자동 적용하지 않음 |
+| 10. Grid 경계 | 확정됨: 현재 환경; baseline 선택은 합의 필요 | 막히면 제자리, blocked=True, Step+1, RSSI 재측정. 경계 Action 제외/재선택 여부는 미정 |
+| 11. 장애물 | 팀 합의 필요 / 현재 미구현 | 환경에는 Grid 경계만 있고 장애물 Map/회피 API 없음 |
+| 12. 신호 미검출 | 팀 합의 필요 / 현재 미구현 | Simulation은 숫자 RSSI 생성; 설계안은 별도 미검출 상태 검토만 명시 |
+| 13. 성공 조건 | 확정됨: 현재 Simulation | agent_position == target_position. 설계안의 실환경 위치 후보/허용 범위는 별도 합의 필요 |
+| 14. 최대 Step | 확정됨: 공통 비교 조건 | config.MAX_STEPS=100; 모든 방식에 같은 제한 적용 |
+| 15. 측정 비용의 Step 포함 | 원칙은 문서에 명시; 계산 방식은 팀 합의 필요 | 설계안 17절은 측정 횟수 차이를 탐색 비용에 포함하도록 함. 별도 측정/왕복 비용 및 지표 저장 방식 미정 |
+
+### Baseline 공정 비교 조건
+
+설계안 17절은 시작 위치·Target·Grid·Noise·최대 Step·측정 방식의 동일성을 요구한다. 아래는 현재 코드에 대응하는 비교 조건이며, 실제 baseline 구현에는 아직 적용/검증하지 않았다.
+
+| 조건 | 현재 코드에서 확인된 기준 |
+| --- | --- |
+| Grid/Map | GRID_SIZE=10, 장애물 없음 |
+| 시작/Target | AGENT_START=(0, 0), TARGET_POSITION=(9, 9) |
+| Step 제한 | MAX_STEPS=100, 경계에 막힌 시도도 포함 |
+| RSSI/Noise | REFERENCE_RSSI=-40.0, REFERENCE_DISTANCE=1.0, PATH_LOSS_EXPONENT=2.0, NOISE_STD=2.0 |
+| 평가 횟수 | NUM_EVAL_EPISODES=100 기본값; Smoke에서는 동일하게 2회 |
+| seed | RANDOM_SEED=42 학습, 평가 환경은 43; Python 전역 환경 RNG와 Agent 전용 RNG 구분 |
+| 성공 | get_info()['success']: 실제 Target 좌표 도달 |
+| 실패 | Episode 종료까지 Target 미도달; 현재 환경에서는 MAX_STEPS 도달 |
+
+Q-Learning의 정보는 현재 RSSI level·이전 대비 trend·직전 Action으로 이루어진 State다. Agent에 위치/Target 좌표/주변 방향 RSSI를 전달하지 않는다. get_info()의 실제 거리/좌표는 환경 종료 판정·결과 집계용이다. Greedy RSSI가 Action 전에 주변 여러 방향을 관측하면 정보와 측정 예산이 달라진다. 이동 Step과 RSSI 측정 횟수의 별도 기록 여부, 측정/복귀 비용 계산, seed별 평가 Episode 구성은 **팀 합의 필요**이며 이번에 지표나 코드를 추가하지 않았다.
+
+동일 seed 출발이 모든 방식에서 동일 Noise 샘플 또는 동일 Action 난수열을 보장하지는 않는다. 경로·측정 횟수에 따라 RNG 소비 순서가 달라지고, 현재 Q-policy는 학습 후 Agent RNG를 이어받는다. Baseline의 독립 RNG·평가 seed 배정 및 반복 seed 목록은 합의 후 검증해야 한다. Random baseline의 경계 Action 포함 여부, 균등 선택 여부, 학습 없는 평가 절차도 구현 전에 합의해야 한다.
+
+### Experiment가 의존하는 실제 인터페이스
+
+#### Environment — src/environment.py
+
+- 클래스: RSSIGridEnv.
+- 생성자: grid_size, max_steps, agent_start, target_position, reference_rssi, reference_distance, path_loss_exponent, noise_std.
+- reset() → float: 위치·Step·blocked 초기화와 시작 RSSI 1회 생성.
+- move(action) → bool: True는 경계에 막힘, False는 실제 이동. Action 시도당 Step+1·RSSI 1회 생성. 잘못된 Action은 ValueError.
+- get_rssi() → Optional[float]: 저장 RSSI 반환; 초기 reset 전에는 None 가능. Experiment는 reset/move 이후 숫자값을 사용한다.
+- is_done() → bool: Target 도달 또는 최대 Step 도달.
+- get_info() → dict: agent_position, target_position, distance, step_count, max_steps, current_rssi, success, done, blocked. Experiment 결과에 직접 필요한 key는 success, step_count, distance.
+- 설계안의 env.step(action) 예시는 현재 구현된 인터페이스가 아니다. 실제 연결은 move/get_rssi/is_done/get_info를 사용한다.
+
+#### State / Reward — src/state_reward.py
+
+- make_state(current_rssi, previous_rssi, previous_action) → (level, trend, previous_action), hashable tuple. 첫 previous_rssi=None은 trend=0, 첫 previous_action은 config.NONE_ACTION=-1.
+- calculate_reward(current_rssi, previous_rssi, *, reward_up=None, reward_keep=None, reward_down=None, move_cost=None, terminal_reward=None, success=False, blocked=False, blocked_apply_move_cost=None, blocked_trend_keep=None, blocked_penalty=None) → 수치 Reward.
+- Experiment는 같은 new_rssi/current_rssi를 State와 Reward에 전달하며, move() 반환값을 blocked로 전달한다. 다섯 Reward 값은 config 또는 Sweep 인자, 경계 옵션은 config/fallback에서 읽는다.
+- RSSI_THRESHOLDS/TREND_THRESHOLD는 config에 없으므로 현재 fallback [-80,-70,-60,-50]/2.0 적용. 실제 신호 기반 보정은 미완료.
+- get_representative_rssi, get_rssi_level, get_rssi_trend, num_rssi_levels, suggest_thresholds는 보조 기능이다. Experiment가 직접 호출하는 State/Reward 함수는 make_state/calculate_reward이며, 위치별 다중 측정 처리는 현재 실험 경로에 연결되지 않았다.
+
+#### Q-Learning — src/q_learning.py
+
+- QLearningAgent(num_actions=4, alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.995, seed=None). 실제 build_agent()는 config 값을 전달하므로 초기 epsilon은 0.9다.
+- choose_action(state, training=True) → int. 학습은 epsilon-greedy, 평가는 training=False로 Q-value greedy 선택.
+- update_q(state, action, reward, next_state, done) → 업데이트한 Q값. done=True이면 bootstrap 없이 terminal Reward만 사용.
+- decay_epsilon() → 감소 후 epsilon. 학습 Episode마다 호출하며 평가에서는 호출하지 않는다.
+- 평가 미등록 State는 저장하지 않는 임시 zero 배열 사용. Q값 동률 후보는 np.isclose로 찾고 Agent 전용 random.choice로 선택한다.
+- save_q_table/load_q_table은 구현되어 있지만 현재 Training/Final/Sweep에서는 호출하지 않는다. 자동 모델 보존·복원 및 RNG checkpoint 재개를 지원하는 실행 흐름으로 간주하지 않는다.
+- get_q_values/get_q_value/get_best_action은 기존 _ensure_state 경로로 State를 추가할 수 있다. 평가 연결부를 이 API로 교체하면 Q-table key 불변성부터 다시 검증해야 한다.
+
+### 다른 담당 모듈 변경 시 재검증 계약
+
+| 변경 | 반드시 확인할 계약 | 다시 실행할 테스트 |
+| --- | --- | --- |
+| Action 번호/방향/행동 수 | 0~3의 의미와 num_actions, 경계 시도, previous_action을 Environment·State·Agent에서 함께 맞춤 | tests/test_environment.py, src/test_q_learning.py, tests/test_experiment.py |
+| 환경 생성/reset/move/RSSI | 생성자 인자, reset 숫자 RSSI, move bool blocked, 시도당 Step+1과 RSSI 1회, 조회 시 새 샘플 없음 | test_rssi_sampling, test_grid_boundaries, test_episode_transition, test_training_and_csv |
+| 성공/done/get_info | Target 도달 및 Step 한도, success/step_count/distance key, 시작부터 done인 경우 추가 Action 없음, terminal Q update | test_target_reached, test_max_steps, test_initially_done, test_terminal_q_update, test_episode_transition |
+| State 구조/구간/Trend | hashable tuple과 NONE_ACTION, 한 transition의 State/Reward가 같은 RSSI 사용, 기존 Q-table 재사용 가능 여부 | src/test_state_reward.py, test_episode_transition, Evaluation key 불변 테스트 |
+| Reward 인자/경계/terminal | explicit Reward config, blocked 전달 의미, 성공 terminal 보상, Sweep 조합 간 config 누출 없음 | test_explicit_reward_config_and_terminal_reward, test_blocked_options, tests/test_experiment_sweep.py |
+| Agent constructor/update/epsilon | config 전달, done update 공식, decay는 학습만, 매 실행 새 Q-table/epsilon | src/test_q_learning.py, test_build_agent, Sweep 독립성 테스트 |
+| Evaluation API/greedy 조회 | training=False 전달, Q-table 값·key 및 epsilon 불변, update/decay 없음, 동일 학습 Agent 유지 | tests/test_experiment.py, tests/test_final_evaluation.py |
+| RNG/seed 정책 | 환경 전역 random과 Agent random.Random 분리, 학습42/평가환경43, 동일 설정 재현성 | tests/test_reproducibility.py, test_reproducibility_with_same_seed, Sweep 재현성 테스트 |
+| 결과 schema/집계/저장 | 전체 평균에 실패 포함, 성공 0건 None→빈 CSV, 합계/성공률 및 summary/CSV 일치, 덮어쓰기 | test_evaluate_agent_metrics, test_run_sweep_saves_csv, tests/test_final_evaluation.py 및 7절 raw 검산 |
+
+표의 함수별 확인 후 전체 `pytest -q`도 다시 실행한다. 7절 raw 검산은 해당 버전의 CSV를 먼저 생성한 뒤 수행한다. 환경/알고리즘 변경 시 과거 CSV와의 숫자 일치를 요구하지 않고 새 raw와 새 summary/CSV의 일치를 확인해야 한다.
+
+### 완료와 남은 작업
+
+**완료 — 현재 HEAD에서 코드 확인 및 자동 테스트로 검증**
+
+- 실제 QLearningAgent 연결, Episode 학습 반복, 별도 greedy Evaluation, 학습 Agent 재사용.
+- Reward 조합별 새 Agent/Q-table/epsilon, 동일한 Reward 외 조건, seed 재현성 및 조합 순서 독립.
+- Training/Sweep/Final CSV 저장, Final summary, 성공 0건 처리와 summary/CSV 일치.
+- Evaluation Q-value·key·epsilon 불변 및 Q update/decay 제외 검증.
+- 현재 HEAD 전체 회귀 테스트, 4단계의 실제 Smoke/raw 통계 검산 기록과 재현 명령, Baseline 현황 및 Integration 계약 정리.
+
+**미구현 또는 향후 합의/실측이 필요한 작업**
+
+- Greedy RSSI 및 독립 Random baseline, 두 방식의 공통 평가 실행 경로.
+- 측정/주변 탐색/복귀 예산·동률·경계·미검출 정책과 baseline seed 규칙.
+- 최종 Reward 선택에 대한 팀 결정: 현재 Final은 config Reward를 사용하고 자동 선택하지 않는다.
+- 실제 Raspberry Pi RSSI 측정·대표값 및 level/trend/noise/model 보정, 실제 환경 성능 평가.
+- 장애물 모델, 위치 후보/성공 허용 범위 등 실환경과 Simulation의 판정 차이 정리.
+- 장시간 성능 비교와 seed별 분포 검증. 현재 Smoke 결과를 최종 성능으로 간주하지 않는다.
+
+이번 5단계에서는 회귀 오류가 없어 Production·설정·기존 테스트를 수정하지 않았고, baseline/새 지표/새 runner도 구현하지 않았다. 이 목록의 남은 항목은 자동으로 착수할 작업이 아니라 팀 협의 대상으로 남긴다.
