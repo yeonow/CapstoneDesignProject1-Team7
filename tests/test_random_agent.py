@@ -1,4 +1,4 @@
-"""Verify the random baseline's actions, reproducibility, and independence."""
+"""Random 베이스라인의 행동 선택, 재현성 및 독립성을 검증한다."""
 
 import builtins
 import random

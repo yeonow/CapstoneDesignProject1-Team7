@@ -1,4 +1,4 @@
-"""Exercise random episodes, RSSI sampling, seeded runs, CSV output, and CLI."""
+"""Random 탐색의 Episode 실행, RSSI 샘플링, Seed 기반 반복 실행, CSV 출력 및 CLI 기능을 검증한다."""
 
 import csv
 import random

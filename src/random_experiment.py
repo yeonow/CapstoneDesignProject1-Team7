@@ -1,4 +1,4 @@
-"""Run the random baseline with python -m src.random_experiment."""
+"""python -m src.random_experiment 명령어로 Random 베이스라인을 실행한다"""
 
 import argparse
 import csv
