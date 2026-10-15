@@ -153,7 +153,7 @@ def test_comparison_retrains_each_run_and_passes_same_trained_agent(tmp_path):
     for env in environments:
         for name in (
             "GRID_SIZE", "MAX_STEPS", "AGENT_START", "TARGET_POSITION",
-            "REFERENCE_RSSI", "REFERENCE_DISTANCE", "PATH_LOSS_EXPONENT", "NOISE_STD",
+            "CARRIER_FREQUENCY_HZ", "TX_POWER_DBM", "PATH_LOSS_EXPONENT", "NOISE_STD",
         ):
             assert getattr(env, name.lower()) == getattr(config, name)
     assert len(result["episodes"]) == 12
@@ -277,7 +277,8 @@ def test_reproducibility_csv_fields_and_existing_file_preservation(tmp_path, mon
         assert rows == [{key: "" if value is None else str(value)
                          for key, value in row.items()} for row in second[key]]
         assert not any("reward" in field for field in fields)
-    assert all(row["average_steps_on_success"] is None for row in second["summary"])
+    assert all((row["average_steps_on_success"] is None) == (row["success_count"] == 0)
+               for row in second["summary"])
     assert all(row["train_episodes"] == config.NUM_EPISODES
                for row in second["summary"] if row["algorithm"] == "q_learning")
 

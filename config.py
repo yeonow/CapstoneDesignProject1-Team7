@@ -36,6 +36,15 @@ BLOCKED_PENALTY = 0.0            # 막힌 Action에 추가로 주는 penalty (0 
 GRID_SIZE = 10
 MAX_STEPS = 100
 
+# Grid 크기별 비교 실험(src.compare_grid_sizes)에서 사용할 환경 설정
+# 시작 위치는 AGENT_START로 같고, Target은 반대쪽 모서리에 둔다.
+# 최단 경로 길이가 Grid 한 변에 비례하므로 MAX_STEPS도 같은 비율로 늘린다.
+GRID_SIZES = (10, 20)
+GRID_ENV_SETTINGS = {
+    10: {"target_position": (9, 9), "max_steps": 100},
+    20: {"target_position": (19, 19), "max_steps": 200},
+}
+
 
 # =========================
 # Action

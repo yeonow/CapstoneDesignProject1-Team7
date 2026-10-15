@@ -7,22 +7,13 @@ from pathlib import Path
 from statistics import fmean
 
 import config
-from src.environment import RSSIGridEnv
+from src import env_factory
 from src.random_agent import RandomAgent
 
 
 def build_environment():
-    """Use the same config as Q-Learning without importing its learning modules."""
-    return RSSIGridEnv(
-        grid_size=config.GRID_SIZE,
-        max_steps=config.MAX_STEPS,
-        agent_start=config.AGENT_START,
-        target_position=config.TARGET_POSITION,
-        reference_rssi=config.REFERENCE_RSSI,
-        reference_distance=config.REFERENCE_DISTANCE,
-        path_loss_exponent=config.PATH_LOSS_EXPONENT,
-        noise_std=config.NOISE_STD,
-    )
+    """Q-Learning과 같은 환경 생성 함수를 쓰되 학습 모듈은 import하지 않는다."""
+    return env_factory.build_environment()
 
 
 def run_random_episode(env, agent):
