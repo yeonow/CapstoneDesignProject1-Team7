@@ -103,7 +103,7 @@ def test_each_noise_run_trains_fresh_agent_then_evaluates_without_learning(tmp_p
         assert env.noise_std == (0.0 if index < 6 else 5.0)
         for setting in (
             "GRID_SIZE", "MAX_STEPS", "AGENT_START", "TARGET_POSITION",
-            "REFERENCE_RSSI", "REFERENCE_DISTANCE", "PATH_LOSS_EXPONENT",
+            "CARRIER_FREQUENCY_HZ", "TX_POWER_DBM", "PATH_LOSS_EXPONENT",
         ):
             assert getattr(env, setting.lower()) == getattr(config, setting)
     assert config.NOISE_STD == 2.0

@@ -34,8 +34,8 @@ def make_env():
 def test_environment_uses_current_config(monkeypatch):
     settings = {
         "GRID_SIZE": 7, "MAX_STEPS": 15, "AGENT_START": (1, 2),
-        "TARGET_POSITION": (5, 6), "REFERENCE_RSSI": -45.0,
-        "REFERENCE_DISTANCE": 1.5, "PATH_LOSS_EXPONENT": 2.5, "NOISE_STD": 3.0,
+        "TARGET_POSITION": (5, 6), "CARRIER_FREQUENCY_HZ": 5e9,
+        "TX_POWER_DBM": 3.0, "PATH_LOSS_EXPONENT": 2.5, "NOISE_STD": 3.0,
     }
     for name, value in settings.items():
         monkeypatch.setattr(config, name, value)

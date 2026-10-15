@@ -10,6 +10,9 @@ python -m src.compare_algorithms 명령어로 실행한다.
 다만 Episode 길이가 서로 다를 수 있으며, Noise 시퀀스가 동일하다고 해서 서로 다른 위치에서 측정한 RSSI 값까지 동일하다는 의미는 아니다.
 Action 선택에 사용되는 난수 생성기(RNG)는 독립적으로 관리되며, 평가 시작 시 eval_seed로 초기화한다.
 이 난수 생성기는 환경의 Noise 생성과 독립적이다.
+config.TARGET_MODE가 "random"/"split"이면 Target 위치도 Episode마다 바뀐다(src/targets.py).
+학습 Target은 train_seed로 만든 별도 RNG에서, 평가 Target은 f"target:{eval_seed}:{e}"에서 고르므로
+같은 평가 Episode에서는 두 알고리즘이 같은 Target을 받는다.
 또한 실행 과정에서 사용한 Python 및 NumPy의 전역 난수 생성기 상태는 사용 후 원래 상태로 복원한다.
 기존 Environment는 전역 random을 사용하며 수정하지 않았으므로, 실험은 병렬이 아닌 순차적으로 실행해야 한다.
 """
@@ -24,15 +27,20 @@ from statistics import fmean
 import numpy as np
 
 import config
+from src import targets
 from src.experiment import build_agent, build_environment, run_episode
 from src.random_agent import RandomAgent
 from src.random_experiment import run_random_episode
 
 
-EPISODE_FIELDS = (
+# 분석 코드(analyze_paper_results)가 검증하는 기본 열
+BASE_EPISODE_FIELDS = (
     "run", "algorithm", "episode", "train_seed", "eval_seed",
     "success", "steps", "final_distance",
 )
+# Episode별 Target 위치와 시작점→Target 최단 경로 Step 수
+TARGET_FIELDS = ("target_x", "target_y", "shortest_path_steps")
+EPISODE_FIELDS = (*BASE_EPISODE_FIELDS, *TARGET_FIELDS)
 SUMMARY_FIELDS = (
     "run", "algorithm", "train_seed", "eval_seed", "train_episodes",
     "eval_episodes", "success_count", "failure_count", "success_rate",
@@ -67,13 +75,20 @@ def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
         "train_episodes",
     )
     seed = config.RANDOM_SEED if seed is None else seed
+    targets.validate_target_config()
+    candidates = targets.target_candidates("train")
+    target_rng = targets.training_target_rng(seed)
     numpy_state = np.random.get_state()
     try:
         with _noise_seed(seed):
             env = build_environment(noise_std=noise_std)
             agent = build_agent(seed=seed)
             for episode in range(1, count + 1):
-                run_episode(env, agent, training=True)
+                if candidates is None:
+                    run_episode(env, agent, training=True)
+                else:
+                    run_episode(env, agent, training=True,
+                                target_position=target_rng.choice(candidates))
                 agent.decay_epsilon()
                 if (
                     config.LOG_INTERVAL > 0 and episode % config.LOG_INTERVAL == 0
@@ -86,19 +101,28 @@ def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
 
 
 def _evaluate_episodes(env, agent, count, seed, *, q_learning):
+    targets.validate_target_config()
+    candidates = targets.target_candidates("eval")
     results = []
     for episode in range(1, count + 1):
+        target_kwargs = {} if candidates is None else {
+            "target_position": targets.evaluation_target(candidates, seed, episode),
+        }
         with _noise_seed(f"{seed}:{episode}"):
             if q_learning:
-                result = run_episode(env, agent, training=False)
+                result = run_episode(env, agent, training=False, **target_kwargs)
             else:
-                result = run_random_episode(env, agent)
+                result = run_random_episode(env, agent, **target_kwargs)
+        target = env.target_position
         # Reward is internal to Q-Learning and is not a comparison metric.
         results.append({
             "episode": episode,
             "success": bool(result["success"]),
             "steps": int(result["steps"]),
             "final_distance": float(result["final_distance"]),
+            "target_x": target[0],
+            "target_y": target[1],
+            "shortest_path_steps": targets.shortest_path_steps(env.agent_start, target),
         })
     return results
 

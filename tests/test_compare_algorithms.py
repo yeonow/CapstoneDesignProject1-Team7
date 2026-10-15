@@ -106,7 +106,8 @@ def test_random_reuses_agent_and_episode_without_state_or_reward():
     assert isinstance(agents[0], RandomAgent)
     assert not hasattr(agents[0], "q_table")
     assert [row["episode"] for row in results] == [1, 2, 3]
-    assert all(set(row) == {"episode", "success", "steps", "final_distance"}
+    assert all(set(row) == {"episode", "success", "steps", "final_distance",
+                            "target_x", "target_y", "shortest_path_steps"}
                for row in results)
 
 
@@ -153,7 +154,7 @@ def test_comparison_retrains_each_run_and_passes_same_trained_agent(tmp_path):
     for env in environments:
         for name in (
             "GRID_SIZE", "MAX_STEPS", "AGENT_START", "TARGET_POSITION",
-            "REFERENCE_RSSI", "REFERENCE_DISTANCE", "PATH_LOSS_EXPONENT", "NOISE_STD",
+            "CARRIER_FREQUENCY_HZ", "TX_POWER_DBM", "PATH_LOSS_EXPONENT", "NOISE_STD",
         ):
             assert getattr(env, name.lower()) == getattr(config, name)
     assert len(result["episodes"]) == 12
@@ -277,7 +278,8 @@ def test_reproducibility_csv_fields_and_existing_file_preservation(tmp_path, mon
         assert rows == [{key: "" if value is None else str(value)
                          for key, value in row.items()} for row in second[key]]
         assert not any("reward" in field for field in fields)
-    assert all(row["average_steps_on_success"] is None for row in second["summary"])
+    assert all((row["average_steps_on_success"] is None) == (row["success_count"] == 0)
+               for row in second["summary"])
     assert all(row["train_episodes"] == config.NUM_EPISODES
                for row in second["summary"] if row["algorithm"] == "q_learning")
 

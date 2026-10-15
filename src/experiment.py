@@ -9,31 +9,14 @@ from pathlib import Path
 from statistics import fmean
 
 import config
-from src.environment import RSSIGridEnv
+from src import env_factory
 from src.q_learning import QLearningAgent
 from src.state_reward import calculate_reward, make_state
 
 
 def build_environment(noise_std=None):
     """config 설정과 선택적 Noise override로 환경을 생성한다."""
-    return RSSIGridEnv(
-        grid_size=config.GRID_SIZE,
-        max_steps=config.MAX_STEPS,
-        agent_start=config.AGENT_START,
-        target_position=config.TARGET_POSITION,
-        # 새 채널 설정만 전달하며 학습/State/Reward 연결 방식은 유지한다.
-        cell_size_m=config.CELL_SIZE_M,
-        carrier_frequency_hz=config.CARRIER_FREQUENCY_HZ,
-        tx_power_dbm=config.TX_POWER_DBM,
-        eta_los=config.ETA_LOS,
-        eta_nlos=config.ETA_NLOS,
-        path_loss_exponent=config.PATH_LOSS_EXPONENT,
-        multipath_fading=config.MULTIPATH_FADING,
-        noise_std=config.NOISE_STD if noise_std is None else noise_std,
-        min_distance_m=config.MIN_DISTANCE_M,
-        noise_floor_dbm=config.NOISE_FLOOR_DBM,
-        channel_state=config.CHANNEL_STATE,
-    )
+    return env_factory.build_environment(noise_std=noise_std)
 
 
 def build_agent(seed=None):
@@ -72,10 +55,15 @@ def get_reward_config():
     }
 
 
-def run_episode(env, agent, reward_config=None, training=True):
-    """학습 또는 평가 Episode 한 번을 실행하고 결과를 반환한다."""
+def run_episode(env, agent, reward_config=None, training=True, target_position=None):
+    """학습 또는 평가 Episode 한 번을 실행하고 결과를 반환한다.
+
+    target_position을 주면 이번 Episode의 Target을 그 위치로 바꾼다(State에는 넣지 않음).
+    """
     reward_config = get_reward_config() if reward_config is None else reward_config
-    current_rssi = env.reset()
+    current_rssi = (
+        env.reset() if target_position is None else env.reset(target_position)
+    )
     state = make_state(current_rssi, None, config.NONE_ACTION)
     total_reward = 0.0
     terminal_info = None

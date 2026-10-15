@@ -7,32 +7,27 @@ from pathlib import Path
 from statistics import fmean
 
 import config
-from src.environment import RSSIGridEnv
+from src import env_factory
 from src.random_agent import RandomAgent
 
 
 def build_environment():
-    """Use the same config as Q-Learning without importing its learning modules."""
-    return RSSIGridEnv(
-        grid_size=config.GRID_SIZE,
-        max_steps=config.MAX_STEPS,
-        agent_start=config.AGENT_START,
-        target_position=config.TARGET_POSITION,
-        reference_rssi=config.REFERENCE_RSSI,
-        reference_distance=config.REFERENCE_DISTANCE,
-        path_loss_exponent=config.PATH_LOSS_EXPONENT,
-        noise_std=config.NOISE_STD,
-    )
+    """Q-Learning과 같은 환경 생성 함수를 쓰되 학습 모듈은 import하지 않는다."""
+    return env_factory.build_environment()
 
 
-def run_random_episode(env, agent):
+def run_random_episode(env, agent, target_position=None):
     """Reset and run until the environment ends, without state or reward.
 
     reset() samples initial RSSI. Each move() samples again; get_rssi()
     only reads that cached measurement and never feeds it to the agent.
     RNG seeding belongs to the caller, so episodes continue the RNG streams.
+    target_position, if given, moves the target for this episode.
     """
-    env.reset()
+    if target_position is None:
+        env.reset()
+    else:
+        env.reset(target_position)
     done = env.is_done()
     while not done:
         action = agent.choose_action()
