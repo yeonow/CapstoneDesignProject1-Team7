@@ -21,10 +21,18 @@ def build_environment(noise_std=None):
         max_steps=config.MAX_STEPS,
         agent_start=config.AGENT_START,
         target_position=config.TARGET_POSITION,
-        reference_rssi=config.REFERENCE_RSSI,
-        reference_distance=config.REFERENCE_DISTANCE,
+        # 새 채널 설정만 전달하며 학습/State/Reward 연결 방식은 유지한다.
+        cell_size_m=config.CELL_SIZE_M,
+        carrier_frequency_hz=config.CARRIER_FREQUENCY_HZ,
+        tx_power_dbm=config.TX_POWER_DBM,
+        eta_los=config.ETA_LOS,
+        eta_nlos=config.ETA_NLOS,
         path_loss_exponent=config.PATH_LOSS_EXPONENT,
+        multipath_fading=config.MULTIPATH_FADING,
         noise_std=config.NOISE_STD if noise_std is None else noise_std,
+        min_distance_m=config.MIN_DISTANCE_M,
+        noise_floor_dbm=config.NOISE_FLOOR_DBM,
+        channel_state=config.CHANNEL_STATE,
     )
 
 
