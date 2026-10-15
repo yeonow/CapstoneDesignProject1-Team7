@@ -98,12 +98,19 @@ class RSSIGridEnv:
         self.current_rssi: float | None = None
         self.last_move_blocked = False
 
-    def reset(self) -> float:
+    def reset(self, target_position: tuple[int, int] | None = None) -> float:
         """Episode를 처음부터 다시 시작할 때 Agent를 시작 위치로 되돌린다.
 
         Step 수를 0으로 초기화하고, 시작 위치에서 Raw RSSI를 한 번 새로 측정한다.
         동일 측정의 P_rx, SNR, RSSI를 함께 저장하고 RSSI를 반환한다.
+        target_position을 주면 이번 Episode부터 Target을 그 위치로 옮긴다.
+        Target 좌표는 RSSI 계산과 평가에만 쓰고 State에는 넣지 않는다.
         """
+        if target_position is not None:
+            x, y = target_position
+            if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
+                raise ValueError("target_position must be inside the grid")
+            self.target_position = (x, y)
         self.agent_position = self.agent_start
         self.step_count = 0
         self.last_move_blocked = False

@@ -16,14 +16,18 @@ def build_environment():
     return env_factory.build_environment()
 
 
-def run_random_episode(env, agent):
+def run_random_episode(env, agent, target_position=None):
     """Reset and run until the environment ends, without state or reward.
 
     reset() samples initial RSSI. Each move() samples again; get_rssi()
     only reads that cached measurement and never feeds it to the agent.
     RNG seeding belongs to the caller, so episodes continue the RNG streams.
+    target_position, if given, moves the target for this episode.
     """
-    env.reset()
+    if target_position is None:
+        env.reset()
+    else:
+        env.reset(target_position)
     done = env.is_done()
     while not done:
         action = agent.choose_action()

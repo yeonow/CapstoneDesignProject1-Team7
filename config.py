@@ -39,6 +39,14 @@ MAX_STEPS = 100
 # Grid 크기별 비교 실험(src.compare_grid_sizes)에서 사용할 환경 설정
 # 시작 위치는 AGENT_START로 같고, Target은 반대쪽 모서리에 둔다.
 # 최단 경로 길이가 Grid 한 변에 비례하므로 MAX_STEPS도 같은 비율로 늘린다.
+# Target 배치 방식 (src/targets.py). compare_algorithms / compare_noise_sweep /
+# compare_grid_sizes 비교 실험에 적용된다.
+# "fixed": TARGET_POSITION(또는 GRID_ENV_SETTINGS의 target_position) 한 곳만 사용
+# "random": Episode마다 무작위 Target (학습·평가 같은 후보) -> 본 실험
+# "split": 2×2 블록 체커보드로 학습용/평가용 Target 칸 분리 -> 일반화 보조 실험
+TARGET_MODE = "fixed"
+TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 맨해튼 거리(칸)
+
 GRID_SIZES = (10, 20)
 GRID_ENV_SETTINGS = {
     10: {"target_position": (9, 9), "max_steps": 100},

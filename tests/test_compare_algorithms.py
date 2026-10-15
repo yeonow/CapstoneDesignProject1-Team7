@@ -106,7 +106,8 @@ def test_random_reuses_agent_and_episode_without_state_or_reward():
     assert isinstance(agents[0], RandomAgent)
     assert not hasattr(agents[0], "q_table")
     assert [row["episode"] for row in results] == [1, 2, 3]
-    assert all(set(row) == {"episode", "success", "steps", "final_distance"}
+    assert all(set(row) == {"episode", "success", "steps", "final_distance",
+                            "target_x", "target_y", "shortest_path_steps"}
                for row in results)
 
 

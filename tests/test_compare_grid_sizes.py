@@ -11,6 +11,7 @@ import config
 from src import compare_algorithms as comparison
 from src import compare_grid_sizes as grids
 from src import experiment
+from src import targets
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +22,7 @@ def small_config(monkeypatch):
         "GRID_SIZE": 10, "AGENT_START": (0, 0), "TARGET_POSITION": (9, 9),
         "MAX_STEPS": 100, "NUM_EPISODES": 2, "NUM_EVAL_EPISODES": 2,
         "RANDOM_SEED": 0, "LOG_INTERVAL": 0,
+        "TARGET_MODE": "fixed", "TARGET_MIN_DISTANCE": 2,
         "GRID_SIZES": (3, 4),
         "GRID_ENV_SETTINGS": {
             3: {"target_position": (2, 2), "max_steps": 5},
@@ -85,8 +87,10 @@ def test_both_algorithms_run_on_every_grid_size(tmp_path):
     }
     assert (config.GRID_SIZE, config.TARGET_POSITION, config.MAX_STEPS) == (10, (9, 9), 100)
 
+    base = tmp_path / "target_fixed"
+    assert result["output_dir"] == base
     for grid_size in (3, 4):
-        directory = tmp_path / f"grid_{grid_size}x{grid_size}"
+        directory = base / f"grid_{grid_size}x{grid_size}"
         with (directory / "algorithm_comparison_summary.csv").open(newline="", encoding="utf-8") as file:
             assert len(list(csv.DictReader(file))) == 4
 
@@ -96,7 +100,7 @@ def test_both_algorithms_run_on_every_grid_size(tmp_path):
     ]
     assert all(row["steps"] <= {3: 5, 4: 7}[grid_size]
                for grid_size in (3, 4)
-               for row in _read_csv(tmp_path / f"grid_{grid_size}x{grid_size}"
+               for row in _read_csv(base / f"grid_{grid_size}x{grid_size}"
                                     / "algorithm_comparison_episodes.csv", int_fields=("steps",)))
     assert [(row["grid_size"], row["algorithm"], row["run_count"]) for row in result["summary"]] == [
         (3, "q_learning", 2), (3, "random", 2), (4, "q_learning", 2), (4, "random", 2),
@@ -107,13 +111,13 @@ def test_both_algorithms_run_on_every_grid_size(tmp_path):
         assert row["success_rate_mean"] == pytest.approx(
             sum(run["success_rate"] for run in runs) / len(runs))
 
-    summary_rows = _read_csv(tmp_path / "grid_comparison_summary.csv")
+    summary_rows = _read_csv(base / "grid_comparison_summary.csv")
     assert list(summary_rows[0]) == list(grids.GRID_SUMMARY_FIELDS)
     assert len(summary_rows) == 4
-    assert len(_read_csv(tmp_path / "grid_comparison_runs.csv")) == 8
-    assert len(_read_csv(tmp_path / "grid_comparison_table.csv")) == 4
-    assert (tmp_path / "grid_comparison.png").exists()
-    assert (tmp_path / "grid_comparison.pdf").exists()
+    assert len(_read_csv(base / "grid_comparison_runs.csv")) == 8
+    assert len(_read_csv(base / "grid_comparison_table.csv")) == 4
+    assert (base / "grid_comparison.png").exists()
+    assert (base / "grid_comparison.pdf").exists()
 
 
 def test_same_seeds_are_used_on_each_grid(tmp_path):
@@ -138,6 +142,7 @@ def test_cli_options(tmp_path, monkeypatch):
     assert kwargs["grid_sizes"] == [3, 4]
     assert (kwargs["train_episodes"], kwargs["eval_episodes"], kwargs["seed"], kwargs["runs"]) == (2, 3, 1, 2)
     assert kwargs["noise"] is True and kwargs["analyze"] is True
+    assert kwargs["target_mode"] == config.TARGET_MODE
     assert kwargs["output_dir"] == tmp_path
 
 
@@ -148,3 +153,48 @@ def _read_csv(path, int_fields=()):
         for field in int_fields:
             row[field] = int(row[field])
     return rows
+
+
+@pytest.mark.parametrize("mode", ["random", "split"])
+def test_target_modes_vary_targets_and_restore_config(mode, tmp_path):
+    result = grids.run_grid_comparison(
+        grid_sizes=(4,), train_episodes=2, eval_episodes=6, seed=0, runs=1,
+        target_mode=mode, target_min_distance=2, output_dir=tmp_path,
+    )
+    base = tmp_path / f"target_{mode}"
+    assert result["output_dir"] == base
+    assert (config.TARGET_MODE, config.TARGET_MIN_DISTANCE) == ("fixed", 2)
+    episodes = _read_csv(base / "grid_4x4" / "algorithm_comparison_episodes.csv",
+                         int_fields=("episode", "target_x", "target_y", "shortest_path_steps"))
+    by_algorithm = {
+        algorithm: [(row["episode"], row["target_x"], row["target_y"])
+                    for row in episodes if row["algorithm"] == algorithm]
+        for algorithm in ("q_learning", "random")
+    }
+    # 같은 평가 Episode에서는 두 알고리즘이 같은 Target을 받는다.
+    assert by_algorithm["q_learning"] == by_algorithm["random"]
+    for row in episodes:
+        target = (row["target_x"], row["target_y"])
+        assert row["shortest_path_steps"] == row["target_x"] + row["target_y"] >= 2
+        if mode == "split":
+            assert targets.checkerboard_split(target) == "eval"
+    assert all(row["target_mode"] == mode for row in result["summary"])
+
+
+def test_impossible_target_settings_fail_before_training(tmp_path):
+    with patch.object(grids, "compare_algorithms") as compare:
+        with pytest.raises(ValueError, match="candidates"):
+            grids.run_grid_comparison(target_mode="random", target_min_distance=50,
+                                      output_dir=tmp_path)
+    compare.assert_not_called()
+    assert config.TARGET_MODE == "fixed"
+
+
+def test_path_ratio_uses_successful_episodes_only():
+    episodes = [
+        {"success": True, "steps": 6, "shortest_path_steps": 6},
+        {"success": True, "steps": 9, "shortest_path_steps": 6},
+        {"success": False, "steps": 100, "shortest_path_steps": 6},
+    ]
+    assert grids.path_ratio_on_success(episodes) == pytest.approx(1.25)
+    assert grids.path_ratio_on_success(episodes[2:]) is None

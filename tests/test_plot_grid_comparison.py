@@ -8,15 +8,19 @@ from src import compare_grid_sizes as grids
 from src import plot_grid_comparison as plot
 
 
-def summary_row(grid_size, algorithm, success_rate, steps, steps_on_success, distance, runs=2):
+def summary_row(grid_size, algorithm, success_rate, steps, steps_on_success, distance, runs=2,
+                path_ratio=None):
+    if path_ratio is None:
+        path_ratio = (None, None) if steps_on_success[0] is None else (1.1, 0.05)
     row = {
-        "grid_size": grid_size, "max_steps": grid_size * 10, "algorithm": algorithm,
+        "target_mode": "random", "grid_size": grid_size, "max_steps": grid_size * 10, "algorithm": algorithm,
         "run_count": runs, "train_episodes": 500 if algorithm == "q_learning" else 0,
         "eval_episodes": 100,
     }
     for metric, (mean, std) in {
         "success_rate": success_rate, "average_steps": steps,
         "average_steps_on_success": steps_on_success, "average_final_distance": distance,
+        "path_ratio_on_success": path_ratio,
     }.items():
         row[f"{metric}_mean"] = mean
         row[f"{metric}_std"] = std
@@ -43,6 +47,9 @@ def test_report_writes_rounded_table_and_figures(summary_dir, capsys):
         reader = csv.DictReader(file)
         assert reader.fieldnames == list(plot.TABLE_FIELDS)
         table = list(reader)
+    assert {row["target_mode"] for row in table} == {"random"}
+    assert table[0]["path_ratio_on_success_mean"] == "1.1"
+    assert table[3]["path_ratio_on_success_mean"] == ""
     assert [(row["grid"], row["algorithm"]) for row in table] == [
         ("10x10", "Q-Learning"), ("10x10", "Random"), ("20x20", "Q-Learning"), ("20x20", "Random"),
     ]
@@ -84,3 +91,12 @@ def test_single_run_has_no_error_bars(tmp_path):
     loaded = plot.load_grid_summary(tmp_path / "grid_comparison_summary.csv")
     paths = plot.plot_grid_comparison(loaded, tmp_path / "single")
     assert all(path.exists() for path in paths)
+
+
+def test_mixed_target_modes_are_rejected(summary_dir):
+    path = summary_dir / "grid_comparison_summary.csv"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    lines[1] = lines[1].replace("random", "fixed", 1)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Target 모드"):
+        plot.load_grid_summary(path)

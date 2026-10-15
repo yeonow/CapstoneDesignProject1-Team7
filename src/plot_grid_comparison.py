@@ -4,6 +4,7 @@ python -m src.plot_grid_comparison 명령으로 실행한다. 입력은 compare_
 grid_comparison_summary.csv이며, 원본 CSV는 수정하지 않는다.
 - grid_comparison_table.csv: 논문 표에 바로 옮길 수 있게 반올림하고 성공률을 %로 바꾼 표
 - grid_comparison.png / .pdf: 지표 4개를 각자의 y축으로 그린 2×2 막대그래프
+  (Target이 Episode마다 바뀌면 거리가 달라지므로 성공 시 Step 대신 최단 경로 대비 Step 비율을 그린다)
 오차 막대는 Run 간 표본 표준편차(SD)이며, Run이 하나면 그리지 않는다.
 """
 
@@ -18,20 +19,31 @@ import config
 from src.plot_noise_comparison import ALGORITHMS
 
 
+# (지표, 그래프 제목, y축 이름, 배율, 그래프에 그릴지 여부)
 METRICS = (
-    ("success_rate", "Success rate", "Success rate (%)", 100.0),
-    ("average_steps", "Average steps (all episodes)", "Steps", 1.0),
-    ("average_steps_on_success", "Average steps on success", "Steps", 1.0),
-    ("average_final_distance", "Average final distance", "Distance (grid units)", 1.0),
+    ("success_rate", "Success rate", "Success rate (%)", 100.0, True),
+    ("average_steps", "Average steps (all episodes)", "Steps", 1.0, True),
+    ("average_steps_on_success", "Average steps on success", "Steps", 1.0, False),
+    ("path_ratio_on_success", "Path ratio on success (steps / shortest path)",
+     "Steps / shortest path", 1.0, True),
+    ("average_final_distance", "Average final distance", "Distance (grid units)", 1.0, True),
 )
+PLOTTED_METRICS = tuple(metric for metric in METRICS if metric[4])
 TABLE_FIELDS = (
-    "grid", "algorithm", "max_steps", "runs", "train_episodes", "eval_episodes",
+    "target_mode", "grid", "algorithm", "max_steps", "runs", "train_episodes", "eval_episodes",
     "success_rate_percent_mean", "success_rate_percent_std",
     "average_steps_mean", "average_steps_std",
     "average_steps_on_success_mean", "average_steps_on_success_std",
     "average_steps_on_success_valid_runs",
+    "path_ratio_on_success_mean", "path_ratio_on_success_std",
+    "path_ratio_on_success_valid_runs",
     "average_final_distance_mean", "average_final_distance_std",
 )
+TARGET_MODE_TITLES = {
+    "fixed": "Fixed target",
+    "random": "Random target per episode",
+    "split": "Unseen targets (checkerboard train/eval split)",
+}
 ALGORITHM_LABELS = {algorithm: label for algorithm, label, _, _ in ALGORITHMS}
 
 
@@ -58,7 +70,7 @@ def load_grid_summary(path):
         )
     with path.open(newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file)
-        required = {"grid_size", "max_steps", "algorithm", "run_count",
+        required = {"target_mode", "grid_size", "max_steps", "algorithm", "run_count",
                     "train_episodes", "eval_episodes"}
         required.update(f"{metric}_{suffix}" for metric, *_ in METRICS
                         for suffix in ("mean", "std", "run_count"))
@@ -69,8 +81,10 @@ def load_grid_summary(path):
         for raw in reader:
             if raw["algorithm"] not in ALGORITHM_LABELS:
                 raise ValueError(f"알 수 없는 알고리즘: {raw['algorithm']}")
-            row = {"algorithm": raw["algorithm"]}
-            for key in required - {"algorithm"}:
+            if raw["target_mode"] not in TARGET_MODE_TITLES:
+                raise ValueError(f"알 수 없는 Target 모드: {raw['target_mode']}")
+            row = {"algorithm": raw["algorithm"], "target_mode": raw["target_mode"]}
+            for key in required - {"algorithm", "target_mode"}:
                 row[key] = _number(raw[key])
             for key in ("grid_size", "max_steps", "run_count", "train_episodes", "eval_episodes"):
                 row[key] = int(row[key])
@@ -80,6 +94,8 @@ def load_grid_summary(path):
     keys = [(row["grid_size"], row["algorithm"]) for row in rows]
     if len(keys) != len(set(keys)):
         raise ValueError("Grid·알고리즘 조합이 중복되었습니다.")
+    if len({row["target_mode"] for row in rows}) != 1:
+        raise ValueError("한 요약 파일에 여러 Target 모드가 섞여 있습니다.")
     return sorted(rows, key=lambda row: (row["grid_size"], row["algorithm"]))
 
 
@@ -93,13 +109,15 @@ def build_table(rows):
     for row in rows:
         size = row["grid_size"]
         entry = {
+            "target_mode": row["target_mode"],
             "grid": f"{size}x{size}",
             "algorithm": ALGORITHM_LABELS[row["algorithm"]],
             "max_steps": row["max_steps"], "runs": row["run_count"],
             "train_episodes": row["train_episodes"], "eval_episodes": row["eval_episodes"],
             "average_steps_on_success_valid_runs": int(row["average_steps_on_success_run_count"]),
+            "path_ratio_on_success_valid_runs": int(row["path_ratio_on_success_run_count"]),
         }
-        for metric, _, _, scale in METRICS:
+        for metric, _, _, scale, _ in METRICS:
             name = "success_rate_percent" if metric == "success_rate" else metric
             entry[f"{name}_mean"] = _rounded(row[f"{metric}_mean"], scale)
             entry[f"{name}_std"] = _rounded(row[f"{metric}_std"], scale)
@@ -125,21 +143,22 @@ def format_table(table):
             return "NA"
         return f"{mean:.2f} +/- {std:.2f}" if std is not None else f"{mean:.2f}"
 
-    def success_steps_cell(row):
-        text = cell(row["average_steps_on_success_mean"], row["average_steps_on_success_std"])
-        valid = row["average_steps_on_success_valid_runs"]
+    def success_cell(row, metric):
+        text = cell(row[f"{metric}_mean"], row[f"{metric}_std"])
+        valid = row[f"{metric}_valid_runs"]
         # 성공한 Run만 평균하므로 일부 Run만 유효하면 그 수를 함께 보여준다.
         return text if valid in (0, row["runs"]) else f"{text} (n={valid})"
 
     header = ("Grid", "Algorithm", "Runs", "Success rate (%)", "Avg steps",
-              "Avg steps on success", "Final distance")
+              "Avg steps on success", "Path ratio on success", "Final distance")
     lines = [header]
     for row in table:
         lines.append((
             row["grid"], row["algorithm"], str(row["runs"]),
             cell(row["success_rate_percent_mean"], row["success_rate_percent_std"]),
             cell(row["average_steps_mean"], row["average_steps_std"]),
-            success_steps_cell(row),
+            success_cell(row, "average_steps_on_success"),
+            success_cell(row, "path_ratio_on_success"),
             cell(row["average_final_distance_mean"], row["average_final_distance_std"]),
         ))
     widths = [max(len(line[index]) for line in lines) for index in range(len(header))]
@@ -162,7 +181,7 @@ def plot_grid_comparison(rows, output_base):
                          "pdf.fonttype": 42, "figure.facecolor": "white"}):
         fig, axes = plt.subplots(2, 2, figsize=(9.2, 6.8))
         try:
-            for ax, (metric, title, ylabel, scale) in zip(axes.flat, METRICS):
+            for ax, (metric, title, ylabel, scale, _) in zip(axes.flat, PLOTTED_METRICS):
                 top = 0.0
                 for offset, (algorithm, label, color, _) in zip((-width / 2, width / 2), ALGORITHMS):
                     for index, size in enumerate(grid_sizes):
@@ -183,7 +202,7 @@ def plot_grid_comparison(rows, output_base):
                             ax.errorbar(x, value, yerr=error, fmt="none", ecolor="#333333",
                                         capsize=3, linewidth=1.0, zorder=3)
                         top = max(top, value + error)
-                        label_text = f"{value:.1f}"
+                        label_text = f"{value:.2f}" if metric == "path_ratio_on_success" else f"{value:.1f}"
                         valid_runs = int(row.get(f"{metric}_run_count") or 0)
                         if valid_runs < row.get("run_count", 0):
                             # 성공한 Run만 평균한 값이면 유효 Run 수를 함께 적는다.
@@ -195,17 +214,21 @@ def plot_grid_comparison(rows, output_base):
                 ax.set_xlabel("Grid size")
                 ax.set_ylabel(ylabel)
                 ax.set_title(title)
-                ax.set_ylim(0, (top or 1.0) * 1.15)
+                ax.set_ylim(0, (top or 1.0) * 1.18)
+                if metric == "path_ratio_on_success":
+                    # 1.0 = 최단 경로로 도착
+                    ax.axhline(1.0, color="#777777", linewidth=0.9, linestyle="--", zorder=1)
                 ax.grid(axis="y", alpha=0.25, zorder=0)
                 ax.spines[["top", "right"]].set_visible(False)
             handles, labels = axes.flat[0].get_legend_handles_labels()
+            fig.suptitle(TARGET_MODE_TITLES[rows[0]["target_mode"]], fontsize=12, y=1.0)
             fig.legend(handles, labels, loc="upper center", ncol=len(ALGORITHMS), frameon=False,
-                       bbox_to_anchor=(0.5, 1.0))
+                       bbox_to_anchor=(0.5, 0.965))
             runs = sorted({row["run_count"] for row in rows})
             fig.text(0.5, 0.01,
                      f"Bars: mean across runs (runs={', '.join(map(str, runs))}). "
                      "Error bars: sample SD across runs; omitted for a single run. "
-                     "NA: no successful episode.",
+                     "NA: no successful episode. Dashed line: shortest path (ratio 1.0).",
                      ha="center", fontsize=7.5, color="#444444")
             fig.tight_layout(rect=(0, 0.03, 1, 0.95))
             paths = []

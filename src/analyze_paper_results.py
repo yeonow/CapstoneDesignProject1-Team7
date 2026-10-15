@@ -14,9 +14,9 @@ from pathlib import Path
 from statistics import fmean, stdev
 
 import config
-from src.compare_algorithms import EPISODE_FIELDS, SUMMARY_FIELDS, calculate_metrics
+from src.compare_algorithms import BASE_EPISODE_FIELDS, SUMMARY_FIELDS, calculate_metrics
 from src.compare_noise_sweep import (
-    METRICS, NOISE_EPISODE_FIELDS, NOISE_RUN_FIELDS, NOISE_SUMMARY_FIELDS,
+    METRICS, NOISE_RUN_FIELDS, NOISE_SUMMARY_FIELDS,
     aggregate_noise_comparison,
 )
 
@@ -36,6 +36,9 @@ PAIR_FIELDS = (
     "dataset", "noise_std", "run", "train_seed", "eval_seed", "metric", "unit",
     "q_value", "random_value", "difference",
 )
+# Target 열(target_x 등)은 추가 정보이므로 검증에는 기본 열만 요구한다.
+EPISODE_FIELDS = BASE_EPISODE_FIELDS
+NOISE_EPISODE_FIELDS = ("noise_std", *BASE_EPISODE_FIELDS)
 SOURCE_FILES = (
     "algorithm_comparison_episodes.csv", "algorithm_comparison_summary.csv",
     "noise_comparison_episodes.csv", "noise_comparison_runs.csv", "noise_comparison_summary.csv",
