@@ -60,10 +60,22 @@ NONE_ACTION = -1
 AGENT_START = (0, 0)
 TARGET_POSITION = (9, 9)
 
-REFERENCE_RSSI = -40.0
-REFERENCE_DISTANCE = 1.0
-PATH_LOSS_EXPONENT = 2.0
-NOISE_STD = 2.0
+# 논문 식 (2)의 물리 파라미터를 조절하기 위한 Simulation용 임시값이다.
+# 실제 Wi-Fi 실측값이 아니며 Raspberry Pi + Wi-Fi Adapter 측정 후 보정한다.
+CELL_SIZE_M = 1.0               # Grid 한 칸을 실제 거리 1 m로 가정 -> 나중에 더 크게 하거나 해야 됨
+MIN_DISTANCE_M = 1.0             
+CARRIER_FREQUENCY_HZ = 2.4e9    # 2.4 GHz Wi-Fi를 가정한 값(스마트폰 Hotspot이 5 GHz를 쓰면: 5e9 로 수정)
+TX_POWER_DBM = 0.0              # 실제 스마트폰 Wi-Fi 송신전력 측정/추정값이 아닌 Simulation용 임시값
+# 식 (1)에 필요한 SNR을 만들기 위한 수신기 잡음 전력 가정(dBm)이다.
+# 논문에서 직접 주어진 값이 아니며 Raspberry Pi + Wi-Fi Adapter 실측 후 보정한다.
+# NOISE_STD(shadow fading 변동 폭)와 달리 신호 대 잡음 전력비의 기준으로 쓴다.
+NOISE_FLOOR_DBM = -90.0
+ETA_LOS = 2.0                   # 선형 추가 손실 계수; 논문의 eta_nlos > eta_los > 1에 맞춘 임시값
+ETA_NLOS = 20.0
+PATH_LOSS_EXPONENT = 2.0        # κ: 자유공간에 가까운 거리 감쇠를 가정하는 출발값
+MULTIPATH_FADING = 1.0          # nu: 현재 고정 진폭 계수, 1이면 추가 multipath 영향 없음
+NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(dB)
+CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
 
 
 # =========================

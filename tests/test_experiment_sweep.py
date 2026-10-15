@@ -153,7 +153,9 @@ def test_reward_combinations_start_with_independent_agents_and_equal_conditions(
         assert all(env is not previous for previous in environments)
         for name in (
             "grid_size", "agent_start", "target_position", "max_steps",
-            "reference_rssi", "reference_distance", "path_loss_exponent", "noise_std",
+            "cell_size_m", "min_distance_m", "carrier_frequency_hz", "tx_power_dbm",
+            "eta_los", "eta_nlos", "path_loss_exponent", "multipath_fading",
+            "noise_std", "noise_floor_dbm", "channel_state",
         ):
             assert getattr(env, name) == getattr(experiment_sweep.config, name.upper())
         assert _config_snapshot() == config_before
