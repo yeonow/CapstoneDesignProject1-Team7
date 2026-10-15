@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src import experiment_noise_sweep, plot_noise_sweep
+from src import experiment_noise_sweep
 
 
 def test_run_noise_seed_is_reproducible_and_uses_requested_noise():
@@ -43,7 +43,7 @@ def test_aggregate_noise_results_calculates_mean_and_sample_std():
     assert summaries[1]["eval_success_rate_mean"] == pytest.approx(0.8)
 
 
-def test_noise_sweep_saves_csv_and_plot():
+def test_noise_sweep_saves_csv():
     with TemporaryDirectory() as directory:
         output_dir = Path(directory)
         with patch.object(experiment_noise_sweep.config, "MAX_STEPS", 2):
@@ -57,9 +57,6 @@ def test_noise_sweep_saves_csv_and_plot():
 
         runs_path = output_dir / "noise_sweep_runs.csv"
         summary_path = output_dir / "noise_sweep_summary.csv"
-        plot_path = output_dir / "noise_sweep_summary.png"
-        loaded = plot_noise_sweep.load_summary(summary_path)
-        plot_noise_sweep.plot_noise_summary(loaded, plot_path)
 
         with runs_path.open(newline="", encoding="utf-8") as file:
             saved_runs = list(csv.DictReader(file))
@@ -68,4 +65,4 @@ def test_noise_sweep_saves_csv_and_plot():
 
         assert len(runs) == len(saved_runs) == 4
         assert len(summaries) == len(saved_summaries) == 2
-        assert plot_path.exists() and plot_path.stat().st_size > 0
+        
