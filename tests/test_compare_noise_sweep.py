@@ -250,7 +250,8 @@ def test_aggregation_rejects_empty_or_mixed_episode_counts():
         sweep.aggregate_noise_comparison(rows)
 
 
-def test_reproducibility_all_csv_fields_overwrite_and_existing_files_preserved(tmp_path):
+def test_reproducibility_all_csv_fields_overwrite_and_existing_files_preserved(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "MAX_STEPS", 2)
     old_files = {}
     for name in (
         "training_results.csv", "random_results.csv", "final_evaluation_results.csv",
@@ -321,7 +322,8 @@ def test_failure_restores_rngs_without_creating_results(tmp_path):
     assert not (tmp_path / "noise_comparison_runs.csv").exists()
 
 
-def test_plot_with_all_successful_step_metrics_missing(tmp_path):
+def test_plot_with_all_successful_step_metrics_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "MAX_STEPS", 2)
     result = sweep.run_noise_comparison([0, 5], [42], 1, 2, tmp_path)
     rows = plotting.load_summary(tmp_path / "noise_comparison_summary.csv")
     assert {row["algorithm"] for row in rows} == {"random", "q_learning"}

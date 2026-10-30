@@ -15,7 +15,7 @@ def test_q_table_initialization():
 
     q_values = agent.get_q_values(state)
 
-    assert len(q_values) == 4
+    assert len(q_values) == 8
     assert all(q == 0.0 for q in q_values)
 
     print("[PASS] Q-table initialization")
@@ -30,9 +30,9 @@ def test_q_update():
     )
 
     state = (1, 0, -1)
-    next_state = (2, 1, 3)
+    next_state = (2, 1, 7)
 
-    action = 3
+    action = 7
     reward = 10
 
     updated_q = agent.update_q(
@@ -100,14 +100,14 @@ def test_best_action():
     agent.q_table[state][0] = 1.0
     agent.q_table[state][1] = 2.0
     agent.q_table[state][2] = 3.0
-    agent.q_table[state][3] = 10.0
+    agent.q_table[state][7] = 10.0
 
     action = agent.choose_action(
         state,
         training=False,
     )
 
-    assert action == 3
+    assert action == 7
 
     print("[PASS] Greedy action selection")
 

@@ -175,7 +175,7 @@ def test_target_modes_vary_targets_and_restore_config(mode, tmp_path):
     assert by_algorithm["q_learning"] == by_algorithm["random"]
     for row in episodes:
         target = (row["target_x"], row["target_y"])
-        assert row["shortest_path_steps"] == row["target_x"] + row["target_y"] >= 2
+        assert row["shortest_path_steps"] == max(row["target_x"], row["target_y"]) >= 2
         if mode == "split":
             assert targets.checkerboard_split(target) == "eval"
     assert all(row["target_mode"] == mode for row in result["summary"])

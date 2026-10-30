@@ -33,8 +33,19 @@ def test_candidates_respect_min_distance_and_grid():
     candidates = targets.candidate_targets(6, (0, 0), 3)
     assert candidates
     assert all(0 <= x < 6 and 0 <= y < 6 for x, y in candidates)
-    assert all(x + y >= 3 for x, y in candidates)
-    assert len(candidates) == 36 - 6  # x+y<3 인 칸 6개 제외
+    assert all(max(x, y) >= 3 for x, y in candidates)
+    assert len(candidates) == 36 - 9  # max(x,y)<3 인 칸 9개 제외
+
+
+@pytest.mark.parametrize("start,target,expected", [
+    ((0, 0), (0, 0), 0),
+    ((0, 0), (3, 3), 3),
+    ((0, 0), (3, 5), 5),
+    ((5, 4), (1, 2), 4),
+    ((1, 5), (1, 2), 3),
+])
+def test_eight_direction_shortest_path(start, target, expected):
+    assert targets.shortest_path_steps(start, target) == expected
 
 
 def test_checkerboard_split_is_disjoint_complete_and_not_parity_biased():
@@ -45,7 +56,7 @@ def test_checkerboard_split_is_disjoint_complete_and_not_parity_biased():
     assert train | evaluation == set(targets.candidate_targets(10, (0, 0), 5))
     # 2×2 블록이라 두 집합 모두 짝수·홀수 거리를 포함한다.
     for cells in (train, evaluation):
-        assert {(x + y) % 2 for x, y in cells} == {0, 1}
+        assert {targets.shortest_path_steps((0, 0), (x, y)) % 2 for x, y in cells} == {0, 1}
 
 
 def test_phase_candidates_follow_mode(monkeypatch):
