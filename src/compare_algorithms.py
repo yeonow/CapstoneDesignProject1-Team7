@@ -29,6 +29,7 @@ import numpy as np
 import config
 from src import targets
 from src.experiment import build_agent, build_environment, run_episode
+from src.paths import save_selected_paths
 from src.random_agent import RandomAgent
 from src.random_experiment import run_random_episode
 
@@ -100,7 +101,7 @@ def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
     return agent
 
 
-def _evaluate_episodes(env, agent, count, seed, *, q_learning):
+def _evaluate_episodes(env, agent, count, seed, *, q_learning, record_paths=False):
     targets.validate_target_config()
     candidates = targets.target_candidates("eval")
     results = []
@@ -108,6 +109,8 @@ def _evaluate_episodes(env, agent, count, seed, *, q_learning):
         target_kwargs = {} if candidates is None else {
             "target_position": targets.evaluation_target(candidates, seed, episode),
         }
+        if record_paths:
+            target_kwargs["record_path"] = True
         with _noise_seed(f"{seed}:{episode}"):
             if q_learning:
                 result = run_episode(env, agent, training=False, **target_kwargs)
@@ -124,10 +127,12 @@ def _evaluate_episodes(env, agent, count, seed, *, q_learning):
             "target_y": target[1],
             "shortest_path_steps": targets.shortest_path_steps(env.agent_start, target),
         })
+        if record_paths:
+            results[-1]["trajectory"] = result["trajectory"]
     return results
 
 
-def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None):
+def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None, record_paths=False):
     """Evaluate the trained agent greedily in a separate, identically set grid.
 
     Only its tie-breaking RNG is reseeded; Q-table and epsilon remain intact.
@@ -140,10 +145,10 @@ def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None):
     seed = config.RANDOM_SEED + 1 if seed is None else seed
     env = build_environment(noise_std=noise_std)
     agent.random.seed(seed)
-    return _evaluate_episodes(env, agent, count, seed, q_learning=True)
+    return _evaluate_episodes(env, agent, count, seed, q_learning=True, record_paths=record_paths)
 
 
-def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None):
+def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None, record_paths=False):
     """Evaluate the existing RandomAgent/episode runner without any learning."""
     count = _positive_count(
         config.NUM_EVAL_EPISODES if eval_episodes is None else eval_episodes,
@@ -152,7 +157,7 @@ def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None):
     seed = config.RANDOM_SEED + 1 if seed is None else seed
     env = build_environment(noise_std=noise_std)
     agent = RandomAgent(seed=seed)
-    return _evaluate_episodes(env, agent, count, seed, q_learning=False)
+    return _evaluate_episodes(env, agent, count, seed, q_learning=False, record_paths=record_paths)
 
 
 def calculate_metrics(results):
@@ -192,7 +197,7 @@ def save_comparison_results(episode_results, summary_results, output_dir=None):
 
 
 def compare_algorithms(
-    train_episodes=None, eval_episodes=None, seed=None, runs=1, output_dir=None,
+    train_episodes=None, eval_episodes=None, seed=None, runs=1, output_dir=None, record_paths=False,
 ):
     """Retrain for every run, evaluate both algorithms, save and return rows.
 
@@ -210,20 +215,31 @@ def compare_algorithms(
     _positive_count(runs, "runs")
     seed = config.RANDOM_SEED if seed is None else seed
     episodes, summaries = [], []
+    trajectories = []
+    recording = {"record_paths": True} if record_paths else {}
     print("Episode noise seed: '<eval_seed>:<episode>' | action seed: eval_seed")
     for run in range(1, runs + 1):
         train_seed = seed + 2 * (run - 1)
         eval_seed = train_seed + 1
         print(f"Run {run}/{runs} | train_seed={train_seed} | eval_seed={eval_seed}")
         agent = train_q_learning_agent(train_episodes, seed=train_seed)
-        q_results = evaluate_q_learning(agent, eval_episodes, seed=eval_seed)
-        random_results = evaluate_random_agent(eval_episodes, seed=eval_seed)
+        q_results = evaluate_q_learning(agent, eval_episodes, seed=eval_seed, **recording)
+        random_results = evaluate_random_agent(eval_episodes, seed=eval_seed, **recording)
         for algorithm, results in (("q_learning", q_results), ("random", random_results)):
             metadata = {
                 "run": run, "algorithm": algorithm,
                 "train_seed": train_seed, "eval_seed": eval_seed,
             }
-            episodes.extend({**metadata, **row} for row in results)
+            for row in results:
+                if record_paths:
+                    trajectory = row.pop("trajectory")
+                    # Failures are observed too, but cannot be selected later.
+                    if row["success"]:
+                        trajectories.append({
+                            **metadata, **row, **trajectory, "target_mode": config.TARGET_MODE,
+                            "noise_seed": f"{eval_seed}:{row['episode']}",
+                        })
+                episodes.append({**metadata, **row})
             summary = {
                 **metadata,
                 "train_episodes": train_episodes if algorithm == "q_learning" else 0,
@@ -240,7 +256,13 @@ def compare_algorithms(
             )
     paths = save_comparison_results(episodes, summaries, output_dir)
     print("Results saved to:\n" + "\n".join(str(path) for path in paths))
-    return {"episodes": episodes, "summary": summaries}
+    result = {"episodes": episodes, "summary": summaries}
+    if record_paths:
+        directory = Path(__file__).resolve().parents[1] / (
+            config.RESULTS_DIR if output_dir is None else output_dir)
+        result["paths"] = save_selected_paths(
+            trajectories, directory, target_mode=config.TARGET_MODE, grid_size=config.GRID_SIZE)
+    return result
 
 
 def main():

@@ -25,7 +25,7 @@ from statistics import fmean, stdev
 import config
 from src import targets
 from src.analyze_paper_results import analyze_paper_results
-from src.compare_algorithms import SUMMARY_FIELDS, compare_algorithms
+from src.compare_algorithms import SUMMARY_FIELDS, calculate_metrics, compare_algorithms
 from src.compare_noise_sweep import run_noise_comparison
 from src.experiment_noise_sweep import (
     DEFAULT_NOISE_STDS,
@@ -159,7 +159,7 @@ def run_grid_comparison(
     grid_sizes=None, train_episodes=None, eval_episodes=None, seed=None, runs=1,
     target_mode=None, target_min_distance=None,
     noise=False, noise_stds=DEFAULT_NOISE_STDS, noise_seeds=DEFAULT_SEEDS,
-    noise_train_episodes=DEFAULT_TRAIN_EPISODES, analyze=False, plot=True, output_dir=None,
+    noise_train_episodes=DEFAULT_TRAIN_EPISODES, analyze=False, plot=True, output_dir=None, plot_paths=False,
 ):
     """각 Grid 크기에서 두 알고리즘을 비교하고 Grid 간 요약을 저장·반환한다.
 
@@ -196,6 +196,7 @@ def run_grid_comparison(
                 result = compare_algorithms(
                     train_episodes=train_episodes, eval_episodes=eval_episodes,
                     seed=seed, runs=runs, output_dir=directory,
+                    **({"record_paths": True} if plot_paths else {}),
                 )
                 for row in result["summary"]:
                     episodes = [
@@ -207,6 +208,22 @@ def run_grid_comparison(
                         "max_steps": settings["max_steps"], **row,
                         "path_ratio_on_success": path_ratio_on_success(episodes),
                     })
+                if plot_paths:
+                    from src.plot_paths import plot_path_comparison
+
+                    metrics = {}
+                    for algorithm in ("q_learning", "random"):
+                        episodes = [row for row in result["episodes"]
+                                    if row["algorithm"] == algorithm]
+                        metrics[algorithm] = {
+                            **calculate_metrics(episodes),
+                            "path_ratio_on_success": path_ratio_on_success(episodes),
+                        }
+                    plot_path_comparison(
+                        result["paths"], metrics,
+                        Path(__file__).resolve().parents[1] / directory / "paths",
+                        target_mode=mode, grid_size=grid_size,
+                    )
                 if noise:
                     run_noise_comparison(
                         noise_stds=noise_stds, seeds=noise_seeds,
@@ -254,6 +271,8 @@ def main():
     parser.add_argument("--noise-train-episodes", type=int, default=DEFAULT_TRAIN_EPISODES)
     parser.add_argument("--analyze", action="store_true",
                         help="Write paper tables and report into each grid folder.")
+    parser.add_argument("--plot-paths", action="store_true",
+                        help="Record evaluation paths and save selected trajectories and figures.")
     parser.add_argument("--no-plot", action="store_true",
                         help="Skip the grid comparison table and figure.")
     parser.add_argument("--output-dir", type=Path, default=None)
@@ -268,7 +287,7 @@ def main():
             target_mode=args.target_mode, target_min_distance=args.target_min_distance,
             noise=args.noise, noise_stds=args.noise_stds, noise_seeds=args.noise_seeds,
             noise_train_episodes=args.noise_train_episodes, analyze=args.analyze,
-            plot=not args.no_plot, output_dir=args.output_dir,
+            plot=not args.no_plot, output_dir=args.output_dir, plot_paths=args.plot_paths,
         )
     except ValueError as exc:
         parser.error(str(exc))
