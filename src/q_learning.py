@@ -7,6 +7,8 @@ from typing import Hashable, Optional
 
 import numpy as np
 
+from config import ACTIONS
+
 
 class QLearningAgent:
     """
@@ -20,11 +22,15 @@ class QLearningAgent:
         1 = DOWN
         2 = LEFT
         3 = RIGHT
+        4 = UP_LEFT
+        5 = UP_RIGHT
+        6 = DOWN_LEFT
+        7 = DOWN_RIGHT
     """
 
     def __init__(
         self,
-        num_actions: int = 4,
+        num_actions: int = len(ACTIONS),
         alpha: float = 0.1,
         gamma: float = 0.9,
         epsilon: float = 1.0,
@@ -37,7 +43,7 @@ class QLearningAgent:
         ----------
         num_actions : int
             가능한 Action 개수.
-            현재 프로젝트에서는 UP/DOWN/LEFT/RIGHT 4개.
+            현재 프로젝트에서는 대각선을 포함한 8개.
 
         alpha : float
             Learning Rate.
@@ -92,7 +98,7 @@ class QLearningAgent:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
 
-        # {state: np.array([Q_up, Q_down, Q_left, Q_right])}
+        # {state: np.array([Q(action) for action in ACTIONS])}
         self.q_table = {}
 
         self.random = random.Random(seed)

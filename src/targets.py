@@ -10,7 +10,7 @@ config.TARGET_MODE
 색이 시작점으로부터의 거리 홀짝과 같아서, 평가 Target이 모두 홀수 거리에만 놓이는
 편향이 생기기 때문이다.
 
-후보 칸은 시작 위치에서 맨해튼 거리 TARGET_MIN_DISTANCE 이상인 칸이다.
+후보 칸은 시작 위치에서 8방향 최단 이동 횟수가 TARGET_MIN_DISTANCE 이상인 칸이다.
 Target 선택용 RNG는 환경 Noise가 쓰는 전역 random과 분리되어 있어 Noise 시퀀스를 바꾸지 않는다.
 """
 
@@ -24,8 +24,8 @@ PHASES = ("train", "eval")
 
 
 def shortest_path_steps(start, target):
-    """4방향 Grid에서 시작점→Target 최단 경로의 Step 수(맨해튼 거리)."""
-    return abs(target[0] - start[0]) + abs(target[1] - start[1])
+    """8방향 Grid에서 시작점→Target 최단 경로의 Step 수(체비쇼프 거리)."""
+    return max(abs(target[0] - start[0]), abs(target[1] - start[1]))
 
 
 def checkerboard_split(position):

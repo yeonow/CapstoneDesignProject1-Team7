@@ -22,7 +22,7 @@ def build_environment(noise_std=None):
 def build_agent(seed=None):
     """config 학습 설정과 선택적 Seed override로 Agent를 생성한다."""
     return QLearningAgent(
-        num_actions=4,
+        num_actions=len(config.ACTIONS),
         alpha=config.ALPHA,
         gamma=config.GAMMA,
         epsilon=config.EPSILON,
