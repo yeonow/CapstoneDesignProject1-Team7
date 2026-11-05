@@ -63,7 +63,8 @@ def test_q_evaluation_uses_greedy_and_preserves_values_keys_and_epsilon():
     agent = comparison.train_q_learning_agent(2, seed=42)
     initial = experiment.make_state(-65.0, None, config.NONE_ACTION)
     agent.get_q_values(initial)
-    agent.q_table[initial][:] = [0.0, 0.0, 0.0, 10.0]
+    agent.q_table[initial][:] = 0.0
+    agent.q_table[initial][config.RIGHT] = 10.0
     unseen = experiment.make_state(-45.0, -65.0, config.RIGHT)
     agent.q_table.pop(unseen, None)
     before = deepcopy(agent.q_table)
@@ -109,6 +110,24 @@ def test_random_reuses_agent_and_episode_without_state_or_reward():
     assert all(set(row) == {"episode", "success", "steps", "final_distance",
                             "target_x", "target_y", "shortest_path_steps"}
                for row in results)
+
+
+def test_both_algorithms_reach_diagonal_target_in_three_steps():
+    agent = experiment.build_agent(seed=0)
+    with patch.object(agent, "choose_action", return_value=config.DOWN_RIGHT):
+        result = experiment.run_episode(comparison.build_environment(), agent)
+        q_results = comparison.evaluate_q_learning(agent, 1, seed=43)
+    assert result["success"] and result["steps"] == 3
+    assert any(state[2] == config.DOWN_RIGHT for state in agent.q_table)
+    assert all(len(values) == 8 for values in agent.q_table.values())
+    assert any(values[config.DOWN_RIGHT] != 0 for values in agent.q_table.values())
+
+    with patch.object(RandomAgent, "choose_action", return_value=config.DOWN_RIGHT):
+        random_results = comparison.evaluate_random_agent(1, seed=43)
+    for rows in (q_results, random_results):
+        assert rows[0]["success"]
+        assert rows[0]["steps"] == rows[0]["shortest_path_steps"] == 3
+        assert rows[0]["final_distance"] == 0
 
 
 def test_comparison_retrains_each_run_and_passes_same_trained_agent(tmp_path):

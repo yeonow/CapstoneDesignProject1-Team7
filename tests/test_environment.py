@@ -92,9 +92,10 @@ def test_reset() -> None:
         assert noise.call_count == 1
 
 
-def test_four_directions() -> None:
-    """Action 0, 1, 2, 3이 각각 위, 아래, 왼쪽, 오른쪽으로 한 칸 이동하는지 확인한다."""
-    for action, expected in [(0, (2, 1)), (1, (2, 3)), (2, (1, 2)), (3, (3, 2))]:
+def test_eight_directions() -> None:
+    """기존 네 방향과 대각선 네 방향으로 한 칸 이동하는지 확인한다."""
+    for action, expected in [(0, (2, 1)), (1, (2, 3)), (2, (1, 2)), (3, (3, 2)),
+                             (4, (1, 1)), (5, (3, 1)), (6, (1, 3)), (7, (3, 3))]:
         env = make_env(agent_start=(2, 2))
         env.reset()
         assert env.move(action) is False
@@ -105,7 +106,11 @@ def test_four_directions() -> None:
 
 def test_grid_boundaries() -> None:
     """네 경계 밖으로 나가지 않으며, 막혀도 Step 수와 RSSI 측정은 갱신되는지 확인한다."""
-    for start, action in [((2, 0), 0), ((2, 5), 1), ((0, 2), 2), ((5, 2), 3)]:
+    for start, action in [((2, 0), 0), ((2, 5), 1), ((0, 2), 2), ((5, 2), 3),
+                          ((2, 0), 4), ((0, 2), 4), ((0, 0), 4),
+                          ((2, 0), 5), ((5, 2), 5), ((5, 0), 5),
+                          ((2, 5), 6), ((0, 2), 6), ((0, 5), 6),
+                          ((2, 5), 7), ((5, 2), 7), ((5, 5), 7)]:
         env = make_env(agent_start=start, noise_std=2.0)
         # Noise를 순서대로 0, 1로 정해 위치가 같아도 새 측정이 일어났는지 확인한다.
         with patch("src.environment.random.gauss", side_effect=[0.0, 1.0]) as noise:
@@ -129,7 +134,7 @@ def test_invalid_actions() -> None:
     env.reset()
     before = env.get_info()
     with patch("src.environment.random.gauss") as noise:
-        for action in (-1, 4, 99):
+        for action in (-1, 8, 99):
             try:
                 env.move(action)
             except ValueError:
@@ -449,7 +454,7 @@ def test_equation_1_extreme_snr_stays_finite() -> None:
 if __name__ == "__main__":
     test_creation()
     test_reset()
-    test_four_directions()
+    test_eight_directions()
     test_grid_boundaries()
     test_invalid_actions()
     test_distance()

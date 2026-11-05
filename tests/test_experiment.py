@@ -22,7 +22,7 @@ def test_build_agent():
         agent = experiment.build_agent()
 
     agent_class.assert_called_once_with(
-        num_actions=4,
+        num_actions=8,
         alpha=config.ALPHA,
         gamma=config.GAMMA,
         epsilon=config.EPSILON,

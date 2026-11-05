@@ -137,7 +137,7 @@ def test_reward_combinations_start_with_independent_agents_and_equal_conditions(
         assert agent.epsilon == experiment_sweep.config.EPSILON
         for name in ("alpha", "gamma", "epsilon_min", "epsilon_decay"):
             assert getattr(agent, name) == getattr(experiment_sweep.config, name.upper())
-        assert agent.num_actions == 4
+        assert agent.num_actions == 8
         assert agent.random.getstate() == random.Random(
             experiment_sweep.config.RANDOM_SEED
         ).getstate()

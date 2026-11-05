@@ -25,13 +25,16 @@ def test_creation_without_seed():
 
 def test_choose_action_returns_only_configured_directions():
     agent = RandomAgent(seed=42)
-    valid_actions = {config.UP, config.DOWN, config.LEFT, config.RIGHT}
+    valid_actions = set(config.ACTIONS)
+    seen = set()
 
     for _ in range(1000):
         action = agent.choose_action()
         assert isinstance(action, int)
         assert action in valid_actions
         assert action != config.NONE_ACTION
+        seen.add(action)
+    assert seen == valid_actions
 
 
 def test_same_seed_reproduces_action_sequence():
@@ -56,7 +59,7 @@ def test_fixed_different_seeds_produce_different_sequences():
 def test_choose_action_needs_no_state_rssi_reward_or_q_table():
     agent = RandomAgent(seed=42)
 
-    assert agent.choose_action() in {config.UP, config.DOWN, config.LEFT, config.RIGHT}
+    assert agent.choose_action() in set(config.ACTIONS)
     assert not hasattr(agent, "q_table")
 
 
@@ -99,6 +102,4 @@ def test_import_and_selection_without_learning_or_state_reward_dependencies():
         namespace = runpy.run_path(str(module_path))
         agent = namespace["RandomAgent"](seed=42)
         for _ in range(10):
-            assert agent.choose_action() in {
-                config.UP, config.DOWN, config.LEFT, config.RIGHT,
-            }
+            assert agent.choose_action() in set(config.ACTIONS)

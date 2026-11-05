@@ -45,7 +45,7 @@ MAX_STEPS = 100
 # "random": Episode마다 무작위 Target (학습·평가 같은 후보) -> 본 실험
 # "split": 2×2 블록 체커보드로 학습용/평가용 Target 칸 분리 -> 일반화 보조 실험
 TARGET_MODE = "fixed"
-TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 맨해튼 거리(칸)
+TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 이동 횟수(8방향)
 
 GRID_SIZES = (10, 20)
 GRID_ENV_SETTINGS = {
@@ -62,6 +62,12 @@ UP = 0
 DOWN = 1
 LEFT = 2
 RIGHT = 3
+UP_LEFT = 4
+UP_RIGHT = 5
+DOWN_LEFT = 6
+DOWN_RIGHT = 7
+
+ACTIONS = (UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT)
 
 # 첫 이동 전에는 Previous Action이 없음
 NONE_ACTION = -1

@@ -112,7 +112,7 @@ def test_real_random_agent_produces_valid_moves():
         result = experiment.run_random_episode(env, RandomAgent(seed=42))
     assert 0 < result["steps"] <= env.max_steps
     assert move.call_count == result["steps"]
-    assert all(args.args[0] in {config.UP, config.DOWN, config.LEFT, config.RIGHT}
+    assert all(args.args[0] in config.ACTIONS
                for args in move.call_args_list)
     assert set(result) == {"success", "steps", "final_distance"}
 

@@ -387,7 +387,7 @@ def write_report(path, validations, algorithm_rows, noise_rows, differences, inp
               f"- Grid: {config.GRID_SIZE}×{config.GRID_SIZE}; 시작 위치: {config.AGENT_START}; Target: {config.TARGET_POSITION}; 최대 Step: {config.MAX_STEPS}.",
               f"- RSSI 모델: 논문 식 (1)(2) 기반 채널 모델; 반송파 {config.CARRIER_FREQUENCY_HZ:g} Hz, 송신 전력 {config.TX_POWER_DBM} dBm, "
               f"경로 손실 지수 {config.PATH_LOSS_EXPONENT}, 채널 상태 {config.CHANNEL_STATE}, 잡음 전력 {config.NOISE_FLOOR_DBM} dBm; 현재 기본 Noise SD {config.NOISE_STD} dB.",
-              "- 현재 실행 코드: Q-Learning은 Noise별 새 Q-Table 학습 후 training=False Greedy 평가, Random은 RSSI와 무관한 4방향 균등 선택이다.",
+              "- 현재 실행 코드: Q-Learning은 Noise별 새 Q-Table 학습 후 training=False Greedy 평가, Random은 RSSI와 무관한 8방향 균등 선택이다.",
               "- 학습/평가 환경은 분리되며 평가 Noise Seed는 '<eval_seed>:<episode>', Action RNG는 독립적이다. 과거 경로·RSSI·Q-Table은 CSV에 저장되어 있지 않다."]
     for status in validations:
         if status["valid"]:

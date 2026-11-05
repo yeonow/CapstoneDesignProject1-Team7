@@ -121,6 +121,7 @@ class RSSIGridEnv:
         """Q-Learning이 선택한 방향으로 Agent를 한 칸 움직인다.
 
         Action은 0=위(y-1), 1=아래(y+1), 2=왼쪽(x-1), 3=오른쪽(x+1)이다.
+        대각선은 4=왼쪽 위, 5=오른쪽 위, 6=왼쪽 아래, 7=오른쪽 아래다.
         Grid 밖으로 나가려 하면 위치는 그대로 둔다. 그래도 Action은 수행했으므로
         step_count를 늘리고 같은 위치에서 RSSI를 한 번 새로 측정한다.
         잘못된 Action 번호는 ValueError를 발생시킨다.
@@ -136,8 +137,20 @@ class RSSIGridEnv:
             x -= 1
         elif action == 3:  # 오른쪽
             x += 1
+        elif action == 4:
+            x -= 1
+            y -= 1
+        elif action == 5:
+            x += 1
+            y -= 1
+        elif action == 6:
+            x -= 1
+            y += 1
+        elif action == 7:
+            x += 1
+            y += 1
         else:
-            raise ValueError("action must be 0 (UP), 1 (DOWN), 2 (LEFT), or 3 (RIGHT)")
+            raise ValueError("action must be between 0 and 7")
 
         blocked = not (0 <= x < self.grid_size and 0 <= y < self.grid_size)
         if not blocked:
