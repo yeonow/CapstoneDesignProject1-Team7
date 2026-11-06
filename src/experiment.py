@@ -19,10 +19,13 @@ def build_environment(noise_std=None):
     return env_factory.build_environment(noise_std=noise_std)
 
 
-def build_agent(seed=None):
-    """config 학습 설정과 선택적 Seed override로 Agent를 생성한다."""
+def build_agent(seed=None, num_actions=None):
+    """config 학습 설정과 선택적 Seed·Action 수 override로 Agent를 생성한다.
+
+    num_actions가 None이면 8방향 절대 Action 수(len(config.ACTIONS))를 쓴다.
+    """
     return QLearningAgent(
-        num_actions=len(config.ACTIONS),
+        num_actions=len(config.ACTIONS) if num_actions is None else num_actions,
         alpha=config.ALPHA,
         gamma=config.GAMMA,
         epsilon=config.EPSILON,

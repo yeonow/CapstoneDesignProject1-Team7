@@ -31,6 +31,11 @@ from src import targets
 from src.experiment import build_agent, build_environment, run_episode
 from src.random_agent import RandomAgent
 from src.random_experiment import run_random_episode
+from src.relative_actions import RELATIVE_ACTIONS, RelativeActionEnv
+
+
+# Q-Learning Action 정의: 격자 기준 8방향 / 현재 진행 방향 기준 상대 회전
+ACTION_MODES = ("absolute", "relative")
 
 
 # 분석 코드(analyze_paper_results)가 검증하는 기본 열
@@ -64,16 +69,20 @@ def _noise_seed(seed):
         random.setstate(previous_state)
 
 
-def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
+def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None, action_mode="absolute"):
     """Return a newly trained agent, using existing updates and epsilon decay.
 
     No Q-table file is needed: the returned object is passed to evaluation.
     noise_std is an optional override for callers; None uses current config.
+    action_mode="relative" trains on heading-relative actions (src/relative_actions.py)
+    through a wrapper RNG seeded with f"heading:{seed}"; "absolute" is unchanged.
     """
     count = _positive_count(
         config.NUM_EPISODES if train_episodes is None else train_episodes,
         "train_episodes",
     )
+    if action_mode not in ACTION_MODES:
+        raise ValueError(f"action_mode must be one of {ACTION_MODES}: {action_mode!r}")
     seed = config.RANDOM_SEED if seed is None else seed
     targets.validate_target_config()
     candidates = targets.target_candidates("train")
@@ -82,7 +91,11 @@ def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
     try:
         with _noise_seed(seed):
             env = build_environment(noise_std=noise_std)
-            agent = build_agent(seed=seed)
+            if action_mode == "relative":
+                env = RelativeActionEnv(env, seed=f"heading:{seed}")
+                agent = build_agent(seed=seed, num_actions=len(RELATIVE_ACTIONS))
+            else:
+                agent = build_agent(seed=seed)
             for episode in range(1, count + 1):
                 if candidates is None:
                     run_episode(env, agent, training=True)
