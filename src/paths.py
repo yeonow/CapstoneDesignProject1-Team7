@@ -51,6 +51,15 @@ def select_paths(records):
     }
 
 
+def select_best_paths(records):
+    """Independently select each algorithm's best actual successful evaluation."""
+    records = list(records)
+    return {
+        algorithm: select_paths(row for row in records if row["algorithm"] == algorithm)["best"]
+        for algorithm in ("q_learning", "random")
+    }
+
+
 def save_selected_paths(records, output_dir, *, target_mode, grid_size):
     """Write only four selections, including explicit absence records."""
     directory = Path(output_dir) / "paths"

@@ -11,7 +11,21 @@ from src import compare_algorithms as comparison
 from src import compare_grid_sizes as grids
 from src.experiment import build_environment, run_episode
 from src.random_experiment import run_random_episode
-from src.paths import select_paths
+from src.paths import select_best_paths, select_paths
+
+
+def test_best_paths_are_independent_and_exclude_failures():
+    rows = [dict(algorithm=algorithm, success=success, path_ratio=ratio,
+                 steps=steps, run=run, episode=episode)
+            for algorithm, success, ratio, steps, run, episode in [
+                ("q_learning", True, 1, 6, 1, 1),
+                ("random", True, 1, 3, 2, 1),
+                ("random", True, 1, 3, 1, 2),
+                ("random", True, 1, 3, 1, 1),
+                ("random", False, 0, 0, 1, 1)]]
+    selected = select_best_paths(iter(rows))
+    assert selected == {"q_learning": rows[0], "random": rows[3]}
+    assert select_best_paths(rows[:1])["random"] is None
 
 
 @pytest.mark.parametrize("runner", [run_episode, run_random_episode])
