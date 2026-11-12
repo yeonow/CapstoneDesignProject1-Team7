@@ -1,5 +1,53 @@
 # CapstoneDesignProject1-Team7
 
+## 논문 조건: 8방향 Best Path
+
+프로젝트 루트에서 다음 명령으로 전체 실험을 재현합니다.
+
+```powershell
+python -m src.best_paths_experiment
+```
+
+전용 모듈은 20×20 Grid, 시작 (0, 0), 내부 `split` 모드(논문 명칭 **Random Target**),
+Run당 Q-Learning 1,000 Episode 학습 및 100 Episode 평가, 30 Runs, 최대 400 Step,
+Gaussian Noise 표준편차 2 dB를 사용합니다. 각 Run에서 새 정책을 학습하고 greedy 평가합니다.
+기존 Random Search의 8방향 균등 무작위 행동은 유지합니다.
+
+Target 후보에는 **맨해튼 거리 ≥ 5**를 적용하여 385개를 만들고 2×2 블록 체커보드로
+학습 193개/평가 192개로 나눕니다. 경로 최단 Step은 **체비쇼프 거리**입니다.
+기존 실험은 `TARGET_DISTANCE_METRIC = "chebyshev"` 기본값을 유지하며 전용 모듈이 실행 중에만
+`manhattan`으로 바꿉니다. `fixed`, 코드의 `random`, 10×10 실험은 이 모듈에서 실행하지 않습니다.
+
+기본 Seed는 42이고 Run r의 Train Seed는 `42 + 2*(r-1)`, Eval Seed는 `train_seed + 1`입니다.
+평가 Target은 `target:<eval_seed>:<episode>`, Noise는 `<eval_seed>:<episode>`로 정하므로
+두 알고리즘의 Run/Episode별 Target과 Noise 난수 시퀀스 앞부분이 같습니다.
+
+성공한 실제 평가 Episode 중 `(Path Ratio, Steps, Run, Episode)`가 가장 작은 경로를
+알고리즘별로 독립 선정합니다. Representative Path는 생성하지 않습니다.
+두 경로의 Target은 다를 수 있으므로 경로 길이를 동일 Target의 성능 비교로 해석하면 안 됩니다.
+
+결과는 `results/best_paths_8dir/random_target/grid_20x20/`에 저장합니다.
+
+- `q_learning_best.png`, `random_search_best.png`
+- `best_path_comparison.png`, `best_path_comparison.pdf`
+- `q_learning_best.json`, `random_search_best.json` (전체 좌표는 `trajectory.path`)
+- `experiment_summary.csv` (알고리즘별 전체 평가 집계 및 Best 정보)
+
+기존 형식의 `algorithm_comparison_episodes.csv`와 `algorithm_comparison_summary.csv`도
+같은 폴더에 저장합니다. 전체 평가 Step 평균에는 실패를 포함하고 Path Ratio 평균에는 성공만 포함합니다.
+재실행하면 지정 폴더의 같은 이름 파일을 갱신합니다. 기존 `results/path_smoke`는 사용하지 않습니다.
+성공이 없으면 JSON `trajectory`는 `null`, `status`는 `no_successful_episode`이며 그래프에 표시합니다.
+
+빠른 확인과 테스트:
+
+```powershell
+python -m src.best_paths_experiment --train-episodes 2 --eval-episodes 8 --runs 2 --output-dir results/best_paths_8dir_smoke
+python -m pytest -q -p no:cacheprovider
+```
+
+`--train-episodes`, `--eval-episodes`, `--runs`, `--seed`, `--output-dir`만 변경할 수 있습니다.
+논문 전체 실험은 인자를 생략한 기본 명령을 사용합니다.
+
 ## 평가 경로 기록 및 시각화
 
 `--plot-paths`로 평가 Episode의 실제 좌표를 기록하고 Grid 및 알고리즘별 Best / Representative Path를 저장합니다. 옵션을 생략하면 기존 실행 방식과 CSV 형식을 유지합니다.

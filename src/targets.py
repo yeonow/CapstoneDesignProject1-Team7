@@ -10,7 +10,9 @@ config.TARGET_MODE
 색이 시작점으로부터의 거리 홀짝과 같아서, 평가 Target이 모두 홀수 거리에만 놓이는
 편향이 생기기 때문이다.
 
-후보 칸은 시작 위치에서 8방향 최단 이동 횟수가 TARGET_MIN_DISTANCE 이상인 칸이다.
+후보 칸은 TARGET_DISTANCE_METRIC 거리 기준으로 TARGET_MIN_DISTANCE 이상인 칸이다.
+기본은 기존 체비쇼프 거리이며, 논문 Best Path 실험만 맨해튼 거리를 사용한다.
+후보 필터와 별개로 8방향 최단 이동 횟수는 항상 체비쇼프 거리다.
 Target 선택용 RNG는 환경 Noise가 쓰는 전역 random과 분리되어 있어 Noise 시퀀스를 바꾸지 않는다.
 """
 

@@ -17,6 +17,7 @@ def _draw_best_path(figure, ax, record, name):
     grid_size = 20
     ax.set(title=f"{name} Best Path", xlim=(-0.5, 19.5), ylim=(19.5, -0.5),
            xlabel="x (right)", ylabel="y (down)", aspect="equal")
+    ax.set_title(f"{name} Best Path", pad=82)
     ax.set_xticks(range(grid_size))
     ax.set_yticks(range(grid_size))
     ax.tick_params(labelsize=7)
@@ -56,7 +57,6 @@ def _draw_best_path(figure, ax, record, name):
             f"Actual Steps: {record['steps']} | Shortest Steps: {record['shortest_path_steps']}\n"
             f"Path Ratio: {_number(record['path_ratio'])} | Blocked Moves: {record['blocked_move_count']}",
             transform=ax.transAxes, fontsize=8)
-    ax.title.set_position((0.5, 1.23))
 
 
 def plot_best_paths(selections, output_dir):
