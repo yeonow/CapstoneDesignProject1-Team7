@@ -1,0 +1,3 @@
+run,algorithm,train_seed,eval_seed,train_episodes,eval_episodes,success_count,failure_count,success_rate,average_steps,average_steps_on_success,average_final_distance
+1,q_learning,42,43,3,10,1,9,0.1,96.7,67.0,5.339446217774297
+1,random,42,43,0,10,1,9,0.1,93.9,39.0,5.464952649967029

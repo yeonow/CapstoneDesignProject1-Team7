@@ -1,0 +1,8 @@
+{
+  "target_mode": "fixed",
+  "grid_size": 20,
+  "algorithm": "q_learning",
+  "selection": "best",
+  "status": "no_successful_episode",
+  "trajectory": null
+}

@@ -1,0 +1,132 @@
+{
+  "target_mode": "split",
+  "grid_size": 20,
+  "algorithm": "q_learning",
+  "selection": "best",
+  "status": "selected",
+  "trajectory": {
+    "run": 1,
+    "algorithm": "q_learning",
+    "train_seed": 42,
+    "eval_seed": 43,
+    "episode": 4,
+    "success": true,
+    "steps": 23,
+    "final_distance": 0.0,
+    "target_x": 6,
+    "target_y": 1,
+    "shortest_path_steps": 7,
+    "start_position": [
+      0,
+      0
+    ],
+    "target_position": [
+      6,
+      1
+    ],
+    "grid_size": 20,
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        1
+      ]
+    ],
+    "path_ratio": 3.2857142857142856,
+    "noise_std": 2.0,
+    "blocked_move_count": 12,
+    "target_mode": "split",
+    "noise_seed": "43:4"
+  }
+}

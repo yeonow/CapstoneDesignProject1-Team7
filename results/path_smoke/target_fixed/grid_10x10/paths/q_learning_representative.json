@@ -1,0 +1,156 @@
+{
+  "target_mode": "fixed",
+  "grid_size": 10,
+  "algorithm": "q_learning",
+  "selection": "representative",
+  "status": "selected",
+  "trajectory": {
+    "run": 1,
+    "algorithm": "q_learning",
+    "train_seed": 42,
+    "eval_seed": 43,
+    "episode": 2,
+    "success": true,
+    "steps": 29,
+    "final_distance": 0.0,
+    "target_x": 9,
+    "target_y": 9,
+    "shortest_path_steps": 18,
+    "start_position": [
+      0,
+      0
+    ],
+    "target_position": [
+      9,
+      9
+    ],
+    "grid_size": 10,
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        2,
+        9
+      ],
+      [
+        3,
+        9
+      ],
+      [
+        4,
+        9
+      ],
+      [
+        4,
+        9
+      ],
+      [
+        5,
+        9
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        7,
+        9
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        9,
+        9
+      ]
+    ],
+    "path_ratio": 1.6111111111111112,
+    "noise_std": 2.0,
+    "blocked_move_count": 11,
+    "target_mode": "fixed",
+    "noise_seed": "43:2"
+  }
+}
