@@ -15,6 +15,20 @@ from src.paths import select_paths
 
 
 @pytest.mark.parametrize("runner", [run_episode, run_random_episode])
+def test_diagonal_actual_path(runner):
+    env = build_environment()
+    env.agent_start = (0, 0)
+    agent = Mock()
+    agent.choose_action.side_effect = [7, 7]
+    kwargs = {"training": False} if runner is run_episode else {}
+    result = runner(env, agent, target_position=(2, 2), record_path=True, **kwargs)
+    assert result["success"] and result["steps"] == 2
+    assert result["trajectory"]["path"] == [(0, 0), (1, 1), (2, 2)]
+    assert result["trajectory"]["shortest_path_steps"] == 2
+    assert result["trajectory"]["path_ratio"] == 1.0
+
+
+@pytest.mark.parametrize("runner", [run_episode, run_random_episode])
 def test_positions_blocked_moves_and_measurement_count(runner):
     env = build_environment()
     env.agent_start = (0, 0)

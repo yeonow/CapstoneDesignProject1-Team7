@@ -34,14 +34,20 @@ def checkerboard_split(position):
     return "train" if (x // 2 + y // 2) % 2 == 0 else "eval"
 
 
-def candidate_targets(grid_size, start, min_distance, split=None):
+def candidate_targets(grid_size, start, min_distance, split=None, *, distance_metric="chebyshev"):
     """시작점에서 min_distance 이상 떨어진 칸 목록. split을 주면 해당 집합의 칸만 남긴다."""
     if split not in (None, *PHASES):
         raise ValueError(f"split must be None, 'train', or 'eval': {split!r}")
+    if distance_metric not in ("chebyshev", "manhattan"):
+        raise ValueError("distance_metric must be 'chebyshev' or 'manhattan'")
+    def distance(position):
+        if distance_metric == "manhattan":
+            return sum(abs(a - b) for a, b in zip(start, position))
+        return shortest_path_steps(start, position)
     return tuple(
         (x, y)
         for y in range(grid_size) for x in range(grid_size)
-        if shortest_path_steps(start, (x, y)) >= min_distance
+        if distance((x, y)) >= min_distance
         and (split is None or checkerboard_split((x, y)) == split)
     )
 
@@ -76,6 +82,7 @@ def target_candidates(phase):
     return candidate_targets(
         config.GRID_SIZE, config.AGENT_START, config.TARGET_MIN_DISTANCE,
         split=phase if mode == "split" else None,
+        distance_metric=config.TARGET_DISTANCE_METRIC,
     )
 
 
