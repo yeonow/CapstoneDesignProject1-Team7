@@ -29,7 +29,7 @@ import numpy as np
 import config
 from src import targets
 from src.experiment import build_agent, build_environment, run_episode
-from src.paths import save_selected_paths
+from src.paths import save_selected_paths, select_best_paths
 from src.random_agent import RandomAgent
 from src.random_experiment import run_random_episode
 
@@ -198,12 +198,15 @@ def save_comparison_results(episode_results, summary_results, output_dir=None):
 
 def compare_algorithms(
     train_episodes=None, eval_episodes=None, seed=None, runs=1, output_dir=None, record_paths=False,
+    best_paths_only=False,
 ):
     """Retrain for every run, evaluate both algorithms, save and return rows.
 
     Returns {"episodes": [...], "summary": [...]} with per-run metrics.
     Random's train_seed records the paired run, not a training operation.
     """
+    if best_paths_only and not record_paths:
+        raise ValueError("best_paths_only requires record_paths=True")
     train_episodes = _positive_count(
         config.NUM_EPISODES if train_episodes is None else train_episodes,
         "train_episodes",
@@ -260,8 +263,11 @@ def compare_algorithms(
     if record_paths:
         directory = Path(__file__).resolve().parents[1] / (
             config.RESULTS_DIR if output_dir is None else output_dir)
-        result["paths"] = save_selected_paths(
-            trajectories, directory, target_mode=config.TARGET_MODE, grid_size=config.GRID_SIZE)
+        if best_paths_only:
+            result["paths"] = select_best_paths(trajectories)
+        else:
+            result["paths"] = save_selected_paths(
+                trajectories, directory, target_mode=config.TARGET_MODE, grid_size=config.GRID_SIZE)
     return result
 
 
