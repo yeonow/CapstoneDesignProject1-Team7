@@ -12,6 +12,88 @@ def _number(value):
     return "N/A" if value is None else f"{value:.3f}"
 
 
+def _draw_best_path(figure, ax, record, name):
+    """Draw every observed segment, including revisits, with action time colors."""
+    grid_size = 20
+    ax.set(title=f"{name} Best Path", xlim=(-0.5, 19.5), ylim=(19.5, -0.5),
+           xlabel="x (right)", ylabel="y (down)", aspect="equal")
+    ax.set_xticks(range(grid_size))
+    ax.set_yticks(range(grid_size))
+    ax.tick_params(labelsize=7)
+    ax.set_xticks(np.arange(-0.5, grid_size), minor=True)
+    ax.set_yticks(np.arange(-0.5, grid_size), minor=True)
+    ax.grid(which="minor", alpha=0.25)
+    if record is None:
+        ax.text(0.5, 0.5, "No successful evaluation episode", transform=ax.transAxes,
+                ha="center", va="center")
+        return
+    points = np.asarray(record["path"])
+    segments = np.stack((points[:-1], points[1:]), axis=1)
+    lines = LineCollection(segments, cmap="viridis", linewidths=1.8, alpha=0.8)
+    lines.set_array(np.arange(1, len(points)))
+    lines.set_clim(0, max(record["steps"], 1))
+    ax.add_collection(lines)
+    colorbar = figure.colorbar(lines, ax=ax, fraction=0.046, pad=0.03)
+    colorbar.set_label("Action step (early → late)", fontsize=8)
+    delta = np.diff(points, axis=0)
+    moving = np.any(delta != 0, axis=1)
+    ax.quiver(points[:-1, 0][moving], points[:-1, 1][moving],
+              delta[:, 0][moving] * 0.65, delta[:, 1][moving] * 0.65,
+              angles="xy", scale_units="xy", scale=1, width=0.003,
+              color="steelblue", alpha=0.45)
+    labels = {}
+    for index in np.unique(np.linspace(0, len(points) - 1, min(8, len(points)), dtype=int)):
+        labels.setdefault(tuple(points[index]), []).append(str(index))
+    for position, steps in labels.items():
+        ax.annotate(",".join(steps), position, fontsize=7, xytext=(4, -8),
+                    textcoords="offset points")
+    ax.scatter(*record["start_position"], c="green", marker="o", s=85, label="Start", zorder=4)
+    ax.scatter(*record["target_position"], c="red", marker="*", s=160, label="Target", zorder=5)
+    ax.legend(fontsize=8, loc="upper right")
+    ax.text(0, 1.035,
+            f"Target Mode: Random Target | Run {record['run']} / Episode {record['episode']}\n"
+            f"Start {tuple(record['start_position'])} → Target {tuple(record['target_position'])}\n"
+            f"Actual Steps: {record['steps']} | Shortest Steps: {record['shortest_path_steps']}\n"
+            f"Path Ratio: {_number(record['path_ratio'])} | Blocked Moves: {record['blocked_move_count']}",
+            transform=ax.transAxes, fontsize=8)
+    ax.title.set_position((0.5, 1.23))
+
+
+def plot_best_paths(selections, output_dir):
+    """Paper experiment only: two individual PNGs and a side-by-side PNG/PDF."""
+    for record in selections.values():
+        if record is not None and (record["grid_size"] != 20 or record["target_mode"] != "split"):
+            raise ValueError("Best-path figures require grid=20 and target_mode='split'")
+    directory = Path(output_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    outputs = []
+    names = {"q_learning": "Q-Learning", "random": "Random Search"}
+    for algorithm, name in names.items():
+        figure = Figure(figsize=(7.5, 8.5))
+        FigureCanvasAgg(figure)
+        _draw_best_path(figure, figure.subplots(), selections[algorithm], name)
+        figure.subplots_adjust(top=0.76, bottom=0.1, left=0.1, right=0.91)
+        path = directory / f"{'random_search' if algorithm == 'random' else algorithm}_best.png"
+        figure.savefig(path, dpi=240)
+        figure.clear()
+        outputs.append(path)
+    figure = Figure(figsize=(14, 8.5))
+    FigureCanvasAgg(figure)
+    for ax, (algorithm, name) in zip(figure.subplots(1, 2), names.items()):
+        _draw_best_path(figure, ax, selections[algorithm], name)
+    figure.text(0.5, 0.035,
+                "Best episodes selected independently; targets may differ.\n"
+                "Path lengths are not a paired comparison. Numbers show sampled action steps; all coordinates are retained.",
+                ha="center", fontsize=9)
+    figure.subplots_adjust(top=0.77, bottom=0.12, left=0.05, right=0.95, wspace=0.27)
+    for extension in ("png", "pdf"):
+        path = directory / f"best_path_comparison.{extension}"
+        figure.savefig(path, dpi=240)
+        outputs.append(path)
+    figure.clear()
+    return tuple(outputs)
+
+
 def plot_path_comparison(selections, metrics, output_dir, *, target_mode, grid_size):
     """Save a 2x2 comparison; metrics pool all evaluation episodes across runs."""
     figure = Figure(figsize=(13, 13))
