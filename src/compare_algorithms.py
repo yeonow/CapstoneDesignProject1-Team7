@@ -101,9 +101,14 @@ def train_q_learning_agent(train_episodes=None, seed=None, noise_std=None):
     return agent
 
 
-def _evaluate_episodes(env, agent, count, seed, *, q_learning, record_paths=False):
+def _evaluate_episodes(env, agent, count, seed, *, q_learning, record_paths=False,
+                       fixed_target=None):
     targets.validate_target_config()
     candidates = targets.target_candidates("eval")
+    if fixed_target is not None:
+        if candidates is None or fixed_target not in candidates:
+            raise ValueError("Fixed evaluation target must belong to the evaluation candidates")
+        candidates = (fixed_target,)
     results = []
     for episode in range(1, count + 1):
         target_kwargs = {} if candidates is None else {
@@ -132,7 +137,8 @@ def _evaluate_episodes(env, agent, count, seed, *, q_learning, record_paths=Fals
     return results
 
 
-def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None, record_paths=False):
+def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None, record_paths=False,
+                        *, fixed_target=None):
     """Evaluate the trained agent greedily in a separate, identically set grid.
 
     Only its tie-breaking RNG is reseeded; Q-table and epsilon remain intact.
@@ -145,10 +151,12 @@ def evaluate_q_learning(agent, eval_episodes=None, seed=None, noise_std=None, re
     seed = config.RANDOM_SEED + 1 if seed is None else seed
     env = build_environment(noise_std=noise_std)
     agent.random.seed(seed)
-    return _evaluate_episodes(env, agent, count, seed, q_learning=True, record_paths=record_paths)
+    return _evaluate_episodes(env, agent, count, seed, q_learning=True, record_paths=record_paths,
+                              fixed_target=fixed_target)
 
 
-def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None, record_paths=False):
+def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None, record_paths=False,
+                          *, fixed_target=None):
     """Evaluate the existing RandomAgent/episode runner without any learning."""
     count = _positive_count(
         config.NUM_EVAL_EPISODES if eval_episodes is None else eval_episodes,
@@ -157,7 +165,8 @@ def evaluate_random_agent(eval_episodes=None, seed=None, noise_std=None, record_
     seed = config.RANDOM_SEED + 1 if seed is None else seed
     env = build_environment(noise_std=noise_std)
     agent = RandomAgent(seed=seed)
-    return _evaluate_episodes(env, agent, count, seed, q_learning=False, record_paths=record_paths)
+    return _evaluate_episodes(env, agent, count, seed, q_learning=False, record_paths=record_paths,
+                              fixed_target=fixed_target)
 
 
 def calculate_metrics(results):
