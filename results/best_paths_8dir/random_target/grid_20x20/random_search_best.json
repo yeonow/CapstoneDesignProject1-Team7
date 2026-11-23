@@ -1,0 +1,130 @@
+{
+  "grid_size": 20,
+  "target_mode": "split",
+  "target_label": "Random Target",
+  "target_distance_metric": "manhattan",
+  "target_min_distance": 5,
+  "target_candidate_count": 385,
+  "train_target_count": 193,
+  "eval_target_count": 192,
+  "shortest_distance_metric": "chebyshev",
+  "max_steps": 400,
+  "noise_std": 2.0,
+  "noise_distribution": "Gaussian",
+  "seed": 42,
+  "runs": 30,
+  "train_episodes": 1000,
+  "eval_episodes": 100,
+  "actions": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "train_seed_rule": "seed + 2*(run-1)",
+  "eval_seed_rule": "train_seed + 1",
+  "noise_seed_rule": "<eval_seed>:<episode>",
+  "evaluation_policy": "greedy Q-Learning; uniform random eight-action baseline",
+  "model_config": {
+    "ALPHA": 0.1,
+    "GAMMA": 0.9,
+    "EPSILON": 0.9,
+    "EPSILON_MIN": 0.05,
+    "EPSILON_DECAY": 0.995,
+    "REWARD_UP": 1.0,
+    "REWARD_KEEP": 0.0,
+    "REWARD_DOWN": -1.0,
+    "MOVE_COST": 0.1,
+    "TERMINAL_REWARD": 10.0,
+    "BLOCKED_APPLY_MOVE_COST": true,
+    "BLOCKED_TREND_KEEP": false,
+    "BLOCKED_PENALTY": 0.0,
+    "CELL_SIZE_M": 1.0,
+    "MIN_DISTANCE_M": 1.0,
+    "CARRIER_FREQUENCY_HZ": 2400000000.0,
+    "TX_POWER_DBM": 0.0,
+    "NOISE_FLOOR_DBM": -90.0,
+    "ETA_LOS": 2.0,
+    "ETA_NLOS": 20.0,
+    "PATH_LOSS_EXPONENT": 2.0,
+    "MULTIPATH_FADING": 1.0,
+    "CHANNEL_STATE": "los"
+  },
+  "algorithm": "random",
+  "selection": "best",
+  "status": "selected",
+  "selection_rule": "success only; minimum (path_ratio, steps, run, episode)",
+  "trajectory": {
+    "run": 30,
+    "algorithm": "random",
+    "train_seed": 100,
+    "eval_seed": 101,
+    "episode": 1,
+    "success": true,
+    "steps": 9,
+    "final_distance": 0.0,
+    "target_x": 6,
+    "target_y": 1,
+    "shortest_path_steps": 6,
+    "start_position": [
+      0,
+      0
+    ],
+    "target_position": [
+      6,
+      1
+    ],
+    "grid_size": 20,
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        6,
+        1
+      ]
+    ],
+    "path_ratio": 1.5,
+    "noise_std": 2.0,
+    "blocked_move_count": 2,
+    "target_mode": "split",
+    "noise_seed": "101:1"
+  }
+}

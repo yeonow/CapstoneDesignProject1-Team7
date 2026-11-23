@@ -1,0 +1,8 @@
+{
+  "target_mode": "fixed",
+  "grid_size": 10,
+  "algorithm": "random",
+  "selection": "best",
+  "status": "no_successful_episode",
+  "trajectory": null
+}

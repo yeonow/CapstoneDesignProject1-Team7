@@ -10,6 +10,7 @@ from statistics import fmean
 
 import config
 from src import env_factory
+from src.paths import EpisodePath
 from src.q_learning import QLearningAgent
 from src.state_reward import calculate_reward, make_state
 
@@ -55,7 +56,7 @@ def get_reward_config():
     }
 
 
-def run_episode(env, agent, reward_config=None, training=True, target_position=None):
+def run_episode(env, agent, reward_config=None, training=True, target_position=None, record_path=False):
     """학습 또는 평가 Episode 한 번을 실행하고 결과를 반환한다.
 
     target_position을 주면 이번 Episode의 Target을 그 위치로 바꾼다(State에는 넣지 않음).
@@ -64,6 +65,7 @@ def run_episode(env, agent, reward_config=None, training=True, target_position=N
     current_rssi = (
         env.reset() if target_position is None else env.reset(target_position)
     )
+    trajectory = EpisodePath(env) if record_path else None
     state = make_state(current_rssi, None, config.NONE_ACTION)
     total_reward = 0.0
     terminal_info = None
@@ -74,6 +76,8 @@ def run_episode(env, agent, reward_config=None, training=True, target_position=N
         action = select_action(agent, state, training=training)
         # 경계에 막힌 Action인지 Reward 계산에 함께 전달한다.
         blocked = env.move(action)
+        if trajectory is not None:
+            trajectory.append(env)
         # 이동당 한 번 조회한 RSSI를 State와 Reward가 함께 사용한다.
         new_rssi = env.get_rssi()
         next_state = make_state(new_rssi, current_rssi, action)
@@ -96,12 +100,15 @@ def run_episode(env, agent, reward_config=None, training=True, target_position=N
 
     # Ground Truth는 학습 State에 넣지 않고 종료 후 평가에만 사용한다.
     info = terminal_info if terminal_info is not None else env.get_info()
-    return {
+    result = {
         "success": info["success"],
         "steps": info["step_count"],
         "total_reward": total_reward,
         "final_distance": info["distance"],
     }
+    if trajectory is not None:
+        result["trajectory"] = trajectory.finish(env, result["steps"])
+    return result
 
 
 def evaluate_agent(env, agent, num_episodes, reward_config=None):

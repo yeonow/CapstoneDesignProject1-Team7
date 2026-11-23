@@ -1,0 +1,5 @@
+target_mode,grid_size,max_steps,run,algorithm,train_seed,eval_seed,train_episodes,eval_episodes,success_count,failure_count,success_rate,average_steps,average_steps_on_success,average_final_distance,path_ratio_on_success
+split,10,100,1,q_learning,42,43,3,10,1,9,0.1,96.7,67.0,5.339446217774297,4.1875
+split,10,100,1,random,42,43,0,10,1,9,0.1,93.9,39.0,5.464952649967029,3.5454545454545454
+split,20,200,1,q_learning,42,43,3,10,2,8,0.2,165.1,25.5,10.681649849077143,3.392857142857143
+split,20,200,1,random,42,43,0,10,4,6,0.4,176.3,140.75,7.777121553873154,12.458928571428572

@@ -37,6 +37,20 @@ def test_candidates_respect_min_distance_and_grid():
     assert len(candidates) == 36 - 9  # max(x,y)<3 인 칸 9개 제외
 
 
+def test_paper_manhattan_candidates_keep_chebyshev_shortest_distance(monkeypatch):
+    for name, value in {"GRID_SIZE": 20, "TARGET_MODE": "split",
+                        "TARGET_MIN_DISTANCE": 5, "TARGET_DISTANCE_METRIC": "manhattan"}.items():
+        monkeypatch.setattr(config, name, value)
+    train = set(targets.target_candidates("train"))
+    evaluation = set(targets.target_candidates("eval"))
+    assert (len(train | evaluation), len(train), len(evaluation)) == (385, 193, 192)
+    assert not train & evaluation
+    assert all(x + y >= 5 for x, y in train | evaluation)
+    assert (2, 3) in train | evaluation
+    assert targets.shortest_path_steps((0, 0), (2, 3)) == 3
+    assert len(targets.candidate_targets(20, (0, 0), 5)) == 375
+
+
 @pytest.mark.parametrize("start,target,expected", [
     ((0, 0), (0, 0), 0),
     ((0, 0), (3, 3), 3),

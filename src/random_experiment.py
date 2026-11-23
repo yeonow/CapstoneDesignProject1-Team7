@@ -8,6 +8,7 @@ from statistics import fmean
 
 import config
 from src import env_factory
+from src.paths import EpisodePath
 from src.random_agent import RandomAgent
 
 
@@ -16,7 +17,7 @@ def build_environment():
     return env_factory.build_environment()
 
 
-def run_random_episode(env, agent, target_position=None):
+def run_random_episode(env, agent, target_position=None, record_path=False):
     """Reset and run until the environment ends, without state or reward.
 
     reset() samples initial RSSI. Each move() samples again; get_rssi()
@@ -28,19 +29,25 @@ def run_random_episode(env, agent, target_position=None):
         env.reset()
     else:
         env.reset(target_position)
+    trajectory = EpisodePath(env) if record_path else None
     done = env.is_done()
     while not done:
         action = agent.choose_action()
         env.move(action)
+        if trajectory is not None:
+            trajectory.append(env)
         env.get_rssi()
         done = env.is_done()
 
     info = env.get_info()
-    return {
+    result = {
         "success": bool(info["success"]),
         "steps": int(info["step_count"]),
         "final_distance": float(info["distance"]),
     }
+    if trajectory is not None:
+        result["trajectory"] = trajectory.finish(env, result["steps"])
+    return result
 
 
 def save_random_results(results, output_path=None):
