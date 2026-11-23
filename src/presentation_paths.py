@@ -12,6 +12,7 @@ from src.compare_algorithms import (
     _positive_count, evaluate_q_learning, evaluate_random_agent, train_q_learning_agent,
 )
 from src.paths import select_best_paths
+from src.plot_paths import plot_presentation_paths
 
 
 START = (0, 0)
@@ -203,6 +204,7 @@ def run_presentation_paths(*, train_episodes=DEFAULT_TRAIN_EPISODES,
         ]
     best, paired = select_presentation_paths(records)
     _save_results(directory, settings, best, paired)
+    plot_presentation_paths(best, paired, directory, start=START, target=TARGET)
     for algorithm, record in best.items():
         details = ("No successful evaluation episode" if record is None else
                    f"run={record['run']}, episode={record['episode']}, "
