@@ -48,6 +48,43 @@ python -m pytest -q -p no:cacheprovider
 `--train-episodes`, `--eval-episodes`, `--runs`, `--seed`, `--output-dir`만 변경할 수 있습니다.
 논문 전체 실험은 인자를 생략한 기본 명령을 사용합니다.
 
+## 발표용 경로 비교 (Target 17, 18)
+
+프로젝트 루트에서 실행합니다.
+
+```powershell
+python -m src.presentation_paths
+```
+
+기본값은 30 Runs, Run당 Q-Learning 학습 3,000 Episode, 알고리즘별 평가 100 Episode,
+Seed 42입니다. 20×20 Grid, 시작점 (0, 0), 8방향 이동, Noise 표준편차 2 dB,
+최대 400 Step을 사용합니다. 학습 Target은 체비쇼프 거리 5 이상인 후보 중 기존
+2×2 블록 Split 규칙의 학습 집합에서 뽑습니다. (17, 18)은 평가 집합에 속하며
+발표용 평가에서만 고정합니다. Q-Learning은 학습된 Q-table로 greedy 행동을 선택합니다.
+
+Run r의 Train Seed는 `seed + 2*(r-1)`, Eval Seed는 `train_seed + 1`입니다.
+알고리즘별 행동 RNG는 Run 평가 시작 시 Eval Seed로 초기화하고, 환경 Noise는
+Episode마다 동일한 문자열 `<eval_seed>:<episode>`로 초기화합니다.
+Random Search의 Train Seed는 같은 Run을 식별하는 데 사용합니다.
+
+`results/presentation_paths/target_17_18/`에 PNG, PDF, JSON 및
+`presentation_path_summary.csv`를 생성합니다. 독립 Best Path는 각 알고리즘의
+성공 경로에서 (Path Ratio, 실제 Step, Run, Episode) 순으로 선택합니다.
+Path Ratio는 실제 Step을 최단 거리 18로 나눈 값입니다.
+`paired_comparison.*`은 두 알고리즘이 같은 Run과 Episode에서 성공한 쌍 중 합산
+Step이 가장 적은 경우를 보여 줍니다. 합산 Step이 같으면 Run과 Episode 순으로 선택합니다.
+JSON에는 실제 좌표가 첫 위치부터 마지막 Step까지 저장되며, 경계에 막힌 Step은
+연속된 같은 좌표로 보존됩니다. 성공이 없으면 해당 JSON 경로는 `null`이며 그림에 표시합니다.
+CSV는 독립 Best Path 두 건의 발표용 요약입니다.
+
+`--runs`, `--train-episodes`, `--eval-episodes`, `--seed`, `--output-dir`를
+지정할 수 있습니다. 테스트용 축소 실행은 별도 폴더를 사용합니다.
+
+```powershell
+python -m src.presentation_paths --runs 2 --train-episodes 2 --eval-episodes 8 --output-dir results/presentation_paths_smoke
+python -m pytest -q -p no:cacheprovider
+```
+
 ## 평가 경로 기록 및 시각화
 
 `--plot-paths`로 평가 Episode의 실제 좌표를 기록하고 Grid 및 알고리즘별 Best / Representative Path를 저장합니다. 옵션을 생략하면 기존 실행 방식과 CSV 형식을 유지합니다.
