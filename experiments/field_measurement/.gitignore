@@ -11,6 +11,7 @@ results/
 *.csv
 *.log
 metadata.json
+*.zip
 
 # Allow sanitized CSV test fixtures
 !tests/fixtures/**/*.csv
