@@ -35,7 +35,7 @@ sudo python3 -m experiments.field_measurement.collect --interface wlan1 \
 
 - `--detach`는 SSH 터미널과 독립적인 systemd 서비스로 실행한다. 출력된 서비스 이름으로 `sudo systemctl status <unit>`, `sudo journalctl -u <unit>`을 조회한다. 중단은 `sudo systemctl stop <unit>`으로 요청한다. 정상 종료나 종료 요청 시 전용 어댑터를 복원한다. 장비 분리, 강제 종료, 재부팅 뒤에는 다시 인터페이스 상태를 확인한다. [systemd-run](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html)
 - 프레임별로 FCS 검증을 통과하고 지정한 BSSID, Radiotap 주파수, Beacon 채널이 일치하는지 확인한다. 동글이 여러 안테나 값을 기록하면 기존 수집기와 동일하게 첫 번째 값을 사용한다. 5초 캡처에서 적격 Beacon 10개와 첫·끝 적격 프레임 간격 4초를 요구한다. 대표 RSSI는 적격 프레임의 중앙값이다.
-- 품질 미달이면 채널을 다시 탐색해 동일 채널에서 한 번 재시도한다. 새 채널이 검출되면 런을 중단하고 원본을 보존한다. 파일은 실제 채널별 디렉터리에 저장한다. 무선 어댑터 복원까지 성공하면 `completed.json`을 기록한다. 완료 표시가 없는 런은 실패 진단용으로 남으며 새 형식 전처리의 후보에서 제외된다.
+- 품질 미달이면 실패한 시도와 원인을 로그에 남기고 채널을 다시 탐색해 동일 채널에서 한 번 재시도한다. 로그에서 Beacon 부족, 잘못된 시각 또는 수신 시간 부족, Beacon 채널 불일치를 확인할 수 있다. 새 채널이 검출되면 런을 중단하고 원본을 보존한다. 파일은 실제 채널별 디렉터리에 저장한다. 무선 어댑터 복원까지 성공하면 `completed.json`을 기록한다. 완료 표시가 없는 런은 실패 진단용으로 남으며 새 형식 전처리의 후보에서 제외된다.
 
 ## 검증 및 전처리
 
@@ -55,6 +55,8 @@ python -m experiments.field_measurement.analysis.prepare_field_data `
 Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 넣는다. 기본 검증은 원본 ZIP CRC, 런별 요약과 총괄 요약의 일치, PCAPNG 파일 존재, 패킷별 FCS·주파수·채널, 프레임 수, 중앙값, 시나리오 순번을 확인한다. 같은 캡처 안에서 정상 FCS를 가진 대상 Beacon이 다른 채널을 광고하면 캡처 전체를 제외한다. `--verify-captures`는 이 규칙을 원본 PCAPNG에도 적용하고 적격 프레임 번호와 RSSI를 CSV와 비교한다.
 
 시나리오 2의 선택된 런은 두 반복의 접근·이탈 순서에 따라 캡처 시작 시각이 역전되지 않아야 한다. 오류가 나면 해당 반복·방향·순번의 캡처 원본과 현장 기록을 대조한다.
+
+CSV 오류에 파일명이 표시되면 헤더의 빈 이름·중복 이름, 행의 열 개수 또는 인용부호를 확인한다.
 
 | 출력 | 내용 |
 | --- | --- |
