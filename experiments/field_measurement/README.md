@@ -54,6 +54,8 @@ python -m experiments.field_measurement.analysis.prepare_field_data `
 
 Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 넣는다. 기본 검증은 원본 ZIP CRC, 런별 요약과 총괄 요약의 일치, PCAPNG 파일 존재, 패킷별 FCS·주파수·채널, 프레임 수, 중앙값, 시나리오 순번을 확인한다. 같은 캡처 안에서 정상 FCS를 가진 대상 Beacon이 다른 채널을 광고하면 캡처 전체를 제외한다. `--verify-captures`는 이 규칙을 원본 PCAPNG에도 적용하고 적격 프레임 번호와 RSSI를 CSV와 비교한다.
 
+시나리오 2의 선택된 런은 두 반복의 접근·이탈 순서에 따라 캡처 시작 시각이 역전되지 않아야 한다. 오류가 나면 해당 반복·방향·순번의 캡처 원본과 현장 기록을 대조한다.
+
 | 출력 | 내용 |
 | --- | --- |
 | `scenario1_primary.csv` | 1–10m 적격 표본 |
@@ -63,7 +65,7 @@ Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 �
 | `measurement_audit.csv` | 적격·부적격 시도와 15m 대체 런의 선정 이유 |
 | `metadata.json` | 입력 ZIP 및 분석 입력 CSV의 SHA-256, 채널, 캡처 재디코딩 여부, 15m 선택 |
 
-`--15m-run first|last`는 15m 잠정 민감도 분석의 런을 선택한다. 기존 `field_analysis_prepared.zip`과 비교할 때는 `last`를 사용한다. 15m 재측정 위치가 확인되면 현장 기록과 원본을 함께 검토하고 분석 범위를 다시 결정한다.
+`--15m-run first|last`는 15m 잠정 민감도 분석의 런을 선택한다. 기존 `field_analysis_prepared.zip`과 비교할 때는 `last`를 사용한다. 완료된 15m 런이 없어도 1–10m와 시나리오 2가 준비되면 기본 분석을 실행할 수 있다. 이 경우 메타데이터의 `provisional_15m_run`은 `null`이다. 15m 재측정 위치가 확인되면 현장 기록과 원본을 함께 검토하고 분석 범위를 다시 결정한다.
 
 ## 통계 분석 및 시뮬레이션 비교
 
