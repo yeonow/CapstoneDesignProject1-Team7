@@ -364,3 +364,46 @@ def test_episode_to_paper_statistics_keep_success_population_and_equal_run_weigh
     assert not any(p["metric"] == "average_steps_on_success" for p in pairs)
     assert next(s for s in stats if s["metric"] == "success_rate")["valid_run_count"] == 2
     assert analysis.summarize_runs(list(reversed(status["runs"]))) == list(tables.values())
+
+
+def test_safe_graph_pipeline_does_not_train_or_overwrite(fixed_csvs, monkeypatch):
+    import json
+    from src import compare_algorithms, compare_noise_sweep, graph_pipeline
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("CSV 그래프 재생성에서 학습은 금지")
+
+    monkeypatch.setattr(compare_algorithms, "train_q_learning_agent", forbidden)
+    monkeypatch.setattr(compare_noise_sweep, "train_q_learning_agent", forbidden)
+    directory, _ = fixed_csvs
+    before = {p: p.read_bytes() for p in directory.glob("*.csv")}
+    result = graph_pipeline.generate_graphs(directory, directory / "outputs", "test", dataset="algorithm")
+    assert len(result["artifacts"]) == 9  # 표 1개 + PNG/PDF 4쌍
+    manifest = json.loads(result["manifest"].read_text(encoding="utf-8"))
+    assert len(manifest["inputs"]) == 2 and len(manifest["artifacts"]) == 9
+    assert "95%" in manifest["options"]["error_bars"]
+    with pytest.raises(FileExistsError):
+        graph_pipeline.generate_graphs(directory, directory / "outputs", "test", dataset="algorithm")
+    assert all(p.read_bytes() == content for p, content in before.items())
+
+
+def test_safe_graph_pipeline_invalid_input_creates_no_output(fixed_csvs):
+    from src.graph_pipeline import generate_graphs
+    directory, _ = fixed_csvs
+    (directory / "algorithm_comparison_summary.csv").write_text("broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="검증 실패"):
+        generate_graphs(directory, directory / "never", "test", dataset="algorithm")
+    assert not (directory / "never").exists()
+
+
+def test_safe_graph_pipeline_cli_only_reads_synthetic_csvs(fixed_csvs):
+    directory, _ = fixed_csvs
+    process = subprocess.run([
+        sys.executable, "-m", "src.graph_pipeline", "--input-dir", str(directory),
+        "--output-root", str(directory / "cli-safe"), "--name", "test", "--dataset", "noise",
+    ], cwd=Path(__file__).resolve().parents[1], capture_output=True)
+    assert process.returncode == 0, process.stderr
+    assert b"Training episode" not in process.stdout
+    output = directory / "cli-safe" / "pre_calibration" / "test"
+    assert (output / "graph_manifest.json").exists()
+    assert len(list((output / "paper_figures").glob("*.png"))) == 4
