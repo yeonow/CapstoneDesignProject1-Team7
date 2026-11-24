@@ -1,7 +1,6 @@
 """네 가지 비교 지표를 Run별 평균과 표본 표준편차 오차 막대로 시각화한다."""
 
 import argparse
-import csv
 import math
 from pathlib import Path
 
@@ -31,13 +30,28 @@ def _number(value):
 
 
 def load_summary(input_path):
-    """알고리즘 이름은 문자열로 유지하고, 빈 값이나 유한하지 않은 지표는 None으로 읽는다."""
-    with Path(input_path).open(newline="", encoding="utf-8") as file:
-        rows = list(csv.DictReader(file))
-    return [
-        {key: value if key == "algorithm" else _number(value) for key, value in row.items()}
-        for row in rows
-    ]
+    """빈 성공 Step만 결측으로 읽고 손상된 숫자를 결측으로 숨기지 않는다."""
+    from src.analyze_paper_results import read_result_csv
+    from src.compare_noise_sweep import METRICS as metric_names, NOISE_SUMMARY_FIELDS
+
+    rows = read_result_csv(input_path, NOISE_SUMMARY_FIELDS)
+    keys = [(row["noise_std"], row["algorithm"]) for row in rows]
+    if len(keys) != len(set(keys)):
+        raise ValueError("중복된 Noise/알고리즘 Summary 행")
+    for row in rows:
+        if row["run_count"] < 1 or row["eval_episodes"] < 1:
+            raise ValueError("Run/평가 Episode 수는 양수여야 합니다.")
+        for metric in metric_names:
+            mean, sd, count = (row[f"{metric}_{suffix}"] for suffix in ("mean", "std", "run_count"))
+            if count is None or not 0 <= count <= row["run_count"]:
+                raise ValueError(f"유효 Run 수 오류: {metric}")
+            if metric != "average_steps_on_success" and count != row["run_count"]:
+                raise ValueError(f"전체 Run 지표의 표본 수 누락: {metric}")
+            if (mean is None) != (count == 0) or (sd is None) != (count == 0):
+                raise ValueError(f"결측값과 유효 Run 수 불일치: {metric}")
+        if not 0 <= row["success_rate_mean"] <= 1:
+            raise ValueError("성공률은 0~1 비율이어야 합니다.")
+    return rows
 
 
 def plot_noise_comparison(rows, output_path=None):
@@ -48,9 +62,15 @@ def plot_noise_comparison(rows, output_path=None):
     """
     if not rows:
         raise ValueError("rows must not be empty.")
-    rows = [row for row in rows if _number(row.get("noise_std")) is not None]
-    if not rows:
-        raise ValueError("rows must contain a finite noise_std.")
+    keys = set()
+    for row in rows:
+        noise = _number(row.get("noise_std"))
+        if noise is None or noise < 0 or row.get("algorithm") not in {a[0] for a in ALGORITHMS}:
+            raise ValueError("rows must contain a nonnegative finite noise_std and known algorithm.")
+        key = noise, row["algorithm"]
+        if key in keys:
+            raise ValueError("duplicate noise/algorithm row")
+        keys.add(key)
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
