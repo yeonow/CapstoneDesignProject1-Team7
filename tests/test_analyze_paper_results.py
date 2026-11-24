@@ -407,3 +407,47 @@ def test_safe_graph_pipeline_cli_only_reads_synthetic_csvs(fixed_csvs):
     output = directory / "cli-safe" / "pre_calibration" / "test"
     assert (output / "graph_manifest.json").exists()
     assert len(list((output / "paper_figures").glob("*.png"))) == 4
+
+
+def test_step_comparison_recomputes_actual_runs_and_sd(fixed_csvs, monkeypatch):
+    from copy import deepcopy
+    import matplotlib.pyplot as plt
+    from src import plot_step_comparison as steps
+
+    directory, data = fixed_csvs
+    inputs = {}
+    for limit in (200, 300, 400):
+        inputs[limit] = directory / str(limit)
+        inputs[limit].mkdir()
+        episodes, fields = deepcopy(data["algorithm_comparison_episodes.csv"])
+        runs, run_fields = deepcopy(data["algorithm_comparison_summary.csv"])
+        for row in episodes:
+            if (row["algorithm"], row["run"], row["episode"]) == ("q_learning", 2, 2):
+                row.update(success=False, final_distance=3)
+            if not row["success"]:
+                row["steps"] = limit
+        for row in runs:
+            row.update(calculate_metrics([e for e in episodes if (e["run"], e["algorithm"]) == (row["run"], row["algorithm"])]))
+        write_csv(inputs[limit] / steps.FILES[0], episodes, fields)
+        write_csv(inputs[limit] / steps.FILES[1], runs, run_fields)
+    rows, warnings = steps.build_step_summary(inputs, 2, 5, 3)
+    q = [r for r in rows if r["algorithm"] == "q_learning"]
+    assert [r["success_rate_mean_percent"] for r in q] == pytest.approx([50] * 3)
+    sd = 100 / 3 / math.sqrt(2)
+    assert [r["success_rate_sd_percentage_points"] for r in q] == pytest.approx([sd] * 3)
+    assert warnings  # CSV에 없는 환경 조건은 검증됐다고 주장하지 않는다.
+    with pytest.raises(ValueError, match="Run 수"):
+        steps.build_step_summary(inputs, 100, 5, 3)
+    axes = []
+    real = plt.subplots
+
+    def capture(*args, **kwargs):
+        fig, ax = real(*args, **kwargs)
+        axes.append(ax)
+        return fig, ax
+
+    monkeypatch.setattr(plt, "subplots", capture)
+    result = steps.generate_step_graph(inputs, directory / "out", "test", 2, 5, 3)
+    assert axes[0].containers[0].lines[2][0].get_segments()[0][:, 1] == pytest.approx([50-sd, 50+sd])
+    assert (result["output_dir"] / "step_success_rate.pdf").exists()
+    assert result["manifest"].exists()
