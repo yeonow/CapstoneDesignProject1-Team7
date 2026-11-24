@@ -7,6 +7,8 @@ import subprocess
 from contextlib import contextmanager
 from pathlib import Path
 
+LOCK_DIR = Path("/run/rssi-field")
+
 
 def command(*args, timeout=15):
     return subprocess.check_output(args, text=True, timeout=timeout)
@@ -83,9 +85,8 @@ class Radio:
         """Temporarily take only a dedicated, unassociated USB adapter."""
         import fcntl
 
-        lock_dir = Path("/run/lock/rssi-field")
-        lock_dir.mkdir(mode=0o700, exist_ok=True)
-        with (lock_dir / self.interface).open("a") as lock:
+        LOCK_DIR.mkdir(mode=0o700, exist_ok=True)
+        with (LOCK_DIR / self.interface).open("a") as lock:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:

@@ -11,6 +11,12 @@ results/
 *.csv
 *.log
 metadata.json
+completed.json
+report.json
+distance_rssi.png
+gaussian_noise.png
+movement_trend.png
+simulation_comparison.png
 *.zip
 
 # Allow sanitized CSV test fixtures

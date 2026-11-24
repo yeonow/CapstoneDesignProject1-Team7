@@ -59,8 +59,7 @@ def capture(radio, channel, bssid, path, duration):
 def sample_values(rows, bssid, channel):
     if any(good_fcs(row, bssid) and advertised_channels(row) - {str(channel)} for row in rows):
         return None
-    values = [beacon_rssi(row, bssid, channel) for row in rows]
-    return values
+    return [beacon_rssi(row, bssid, channel) for row in rows]
 
 
 def discover(radio, args, probe_dir, hint):
@@ -84,14 +83,19 @@ def csv_writer(stack, path, fields):
     return writer, stream
 
 
+def private_output(output):
+    base = output.resolve()
+    base.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if base.stat().st_mode & 0o077:
+        raise RuntimeError("Choose a private output directory with permissions 0700")
+    return base
+
+
 def run(args):
     from contextlib import ExitStack
 
     radio = Radio(args.interface)
-    base = args.output.resolve()
-    base.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if base.stat().st_mode & 0o077:
-        raise RuntimeError("Choose a private output directory with permissions 0700")
+    base = private_output(args.output)
     probe_dir = base / "channel_probes"
     probe_dir.mkdir(exist_ok=True, mode=0o700)
     with radio.monitor():
@@ -141,10 +145,14 @@ def run(args):
                                   "rssi_dbm": statistics.median(value for _, value in accepted)})
                 summary_file.flush()
                 print(f"Saved sample {index}/{args.count}", flush=True)
-        (folder / "completed.json").write_text(
-            json.dumps({"power_mask_end": radio.health(channel), "completed_at": timestamp()}),
-            encoding="utf-8",
-        )
+        power_after = radio.health(channel)
+        if power_after & ~power_before & (1 << 16):
+            raise RuntimeError("Undervoltage occurred during the run")
+        completion = folder / "completed.json"
+        temporary = completion.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"power_mask_end": power_after, "completed_at": timestamp()}),
+                             encoding="utf-8")
+        temporary.replace(completion)
 
 
 def arguments(argv):
