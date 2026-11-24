@@ -299,3 +299,34 @@ def test_optional_target_columns_preserve_legacy_and_integer_coordinates(tmp_pat
     path.write_text("algorithm,target_x\nq_learning,3\n", encoding="utf-8")
     with pytest.raises(ValueError, match="Target"):
         analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+
+
+@pytest.mark.parametrize("noise", [False, True])
+def test_target_pairing_checks_coordinates_without_changing_metrics(fixed_csvs, noise):
+    directory, data = fixed_csvs
+    name = "noise_comparison_episodes.csv" if noise else "algorithm_comparison_episodes.csv"
+    rows, fields = data[name]
+    for row in rows:
+        row.update(target_x=row["episode"], target_y=4)
+    write_csv(directory / name, rows, fields)
+    assert analysis.validate_dataset(directory, noise=noise)["valid"]
+    rows[0]["target_x"] += 1
+    write_csv(directory / name, rows, fields)
+    status = analysis.validate_dataset(directory, noise=noise)
+    assert not status["valid"] and "Target 불일치" in "\n".join(status["errors"])
+
+
+def test_target_coverage_is_not_silently_partial(fixed_csvs):
+    directory, data = fixed_csvs
+    rows, fields = data["algorithm_comparison_episodes.csv"]
+    rows[0].update(target_x=3, target_y=4)
+    write_csv(directory / "algorithm_comparison_episodes.csv", rows, fields)
+    status = analysis.validate_dataset(directory)
+    assert not status["valid"] and "Target 좌표 누락" in "\n".join(status["errors"])
+
+
+def test_legacy_csv_explicitly_reports_unverified_targets(fixed_csvs):
+    directory, _ = fixed_csvs
+    status = analysis.validate_dataset(directory)
+    assert status["valid"]
+    assert any("Target" in message and "검증하지 못" in message for message in status["warnings"])
