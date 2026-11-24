@@ -1,0 +1,394 @@
+{
+  "verified_head": "ca1d4e4033278cee5095efa582225b6c1f0827a8",
+  "config": {
+    "ALPHA": 0.1,
+    "GAMMA": 0.9,
+    "EPSILON": 0.9,
+    "EPSILON_MIN": 0.05,
+    "EPSILON_DECAY": 0.995,
+    "REWARD_UP": 1.0,
+    "REWARD_KEEP": 0.0,
+    "REWARD_DOWN": -1.0,
+    "MOVE_COST": 0.1,
+    "TERMINAL_REWARD": 10.0,
+    "BLOCKED_APPLY_MOVE_COST": true,
+    "BLOCKED_TREND_KEEP": false,
+    "BLOCKED_PENALTY": 0.0,
+    "GRID_SIZE": 10,
+    "MAX_STEPS": 100,
+    "UP": 0,
+    "DOWN": 1,
+    "LEFT": 2,
+    "RIGHT": 3,
+    "NONE_ACTION": -1,
+    "AGENT_START": [
+      0,
+      0
+    ],
+    "TARGET_POSITION": [
+      9,
+      9
+    ],
+    "REFERENCE_RSSI": -40.0,
+    "REFERENCE_DISTANCE": 1.0,
+    "PATH_LOSS_EXPONENT": 2.0,
+    "NOISE_STD": 2.0,
+    "NUM_EPISODES": 500,
+    "NUM_EVAL_EPISODES": 100,
+    "LOG_INTERVAL": 50,
+    "RANDOM_SEED": 42,
+    "RESULTS_DIR": "results"
+  },
+  "final": {
+    "eval_episodes": 2,
+    "success_count": 1,
+    "failure_count": 1,
+    "success_rate": 0.5,
+    "average_steps": 86.5,
+    "average_steps_on_success": 73.0,
+    "seed": 42,
+    "eval_seed": 43,
+    "train_episodes": 2,
+    "max_steps": 100,
+    "reward_up": 1.0,
+    "reward_keep": 0.0,
+    "reward_down": -1.0,
+    "move_cost": 0.1,
+    "terminal_reward": 10.0
+  },
+  "sweep": [
+    {
+      "name": "baseline",
+      "reward_up": 1.0,
+      "reward_keep": 0.0,
+      "reward_down": -1.0,
+      "move_cost": 0.1,
+      "terminal_reward": 10.0,
+      "train_episodes": 2,
+      "train_success_rate": 0.0,
+      "train_average_steps": 100.0,
+      "train_average_total_reward": -7.999999999999987,
+      "eval_episodes": 2,
+      "eval_success_rate": 0.5,
+      "eval_average_steps": 86.5,
+      "eval_average_steps_on_success": 73.0,
+      "eval_failure_count": 1
+    },
+    {
+      "name": "strong_up",
+      "reward_up": 2.0,
+      "reward_keep": 0.0,
+      "reward_down": -1.0,
+      "move_cost": 0.1,
+      "terminal_reward": 10.0,
+      "train_episodes": 2,
+      "train_success_rate": 0.0,
+      "train_average_steps": 100.0,
+      "train_average_total_reward": 14.999999999999993,
+      "eval_episodes": 2,
+      "eval_success_rate": 0.5,
+      "eval_average_steps": 92.0,
+      "eval_average_steps_on_success": 84.0,
+      "eval_failure_count": 1
+    },
+    {
+      "name": "strong_down_penalty",
+      "reward_up": 1.0,
+      "reward_keep": 0.0,
+      "reward_down": -2.0,
+      "move_cost": 0.1,
+      "terminal_reward": 10.0,
+      "train_episodes": 2,
+      "train_success_rate": 0.0,
+      "train_average_steps": 100.0,
+      "train_average_total_reward": -31.00000000000005,
+      "eval_episodes": 2,
+      "eval_success_rate": 1.0,
+      "eval_average_steps": 39.5,
+      "eval_average_steps_on_success": 39.5,
+      "eval_failure_count": 0
+    },
+    {
+      "name": "high_move_cost",
+      "reward_up": 1.0,
+      "reward_keep": 0.0,
+      "reward_down": -1.0,
+      "move_cost": 0.3,
+      "terminal_reward": 10.0,
+      "train_episodes": 2,
+      "train_success_rate": 0.0,
+      "train_average_steps": 100.0,
+      "train_average_total_reward": -28.000000000000043,
+      "eval_episodes": 2,
+      "eval_success_rate": 1.0,
+      "eval_average_steps": 70.5,
+      "eval_average_steps_on_success": 70.5,
+      "eval_failure_count": 0
+    },
+    {
+      "name": "high_terminal_reward",
+      "reward_up": 1.0,
+      "reward_keep": 0.0,
+      "reward_down": -1.0,
+      "move_cost": 0.1,
+      "terminal_reward": 20.0,
+      "train_episodes": 2,
+      "train_success_rate": 0.0,
+      "train_average_steps": 100.0,
+      "train_average_total_reward": -7.999999999999987,
+      "eval_episodes": 2,
+      "eval_success_rate": 0.5,
+      "eval_average_steps": 86.5,
+      "eval_average_steps_on_success": 73.0,
+      "eval_failure_count": 1
+    }
+  ],
+  "observations": [
+    {
+      "raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.0000000000000036,
+          "final_distance": 5.0990195135927845
+        },
+        {
+          "success": true,
+          "steps": 73,
+          "total_reward": 8.699999999999996,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 1,
+        "failure_count": 1,
+        "success_rate": 0.5,
+        "average_steps": 86.5,
+        "average_steps_on_success": 73.0
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -10.999999999999979,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.999999999999995,
+          "final_distance": 6.324555320336759
+        }
+      ]
+    },
+    {
+      "raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.0000000000000036,
+          "final_distance": 5.0990195135927845
+        },
+        {
+          "success": true,
+          "steps": 73,
+          "total_reward": 8.699999999999996,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 1,
+        "failure_count": 1,
+        "success_rate": 0.5,
+        "average_steps": 86.5,
+        "average_steps_on_success": 73.0
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -10.999999999999979,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.999999999999995,
+          "final_distance": 6.324555320336759
+        }
+      ]
+    },
+    {
+      "raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": 24.999999999999947,
+          "final_distance": 8.0
+        },
+        {
+          "success": true,
+          "steps": 84,
+          "total_reward": 24.600000000000005,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 1,
+        "failure_count": 1,
+        "success_rate": 0.5,
+        "average_steps": 92.0,
+        "average_steps_on_success": 84.0
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": 6.000000000000009,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": 23.99999999999998,
+          "final_distance": 7.615773105863909
+        }
+      ]
+    },
+    {
+      "raw": [
+        {
+          "success": true,
+          "steps": 45,
+          "total_reward": -0.49999999999999467,
+          "final_distance": 0.0
+        },
+        {
+          "success": true,
+          "steps": 34,
+          "total_reward": 4.600000000000004,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 2,
+        "failure_count": 0,
+        "success_rate": 1.0,
+        "average_steps": 39.5,
+        "average_steps_on_success": 39.5
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -32.00000000000004,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -30.00000000000006,
+          "final_distance": 6.324555320336759
+        }
+      ]
+    },
+    {
+      "raw": [
+        {
+          "success": true,
+          "steps": 91,
+          "total_reward": -8.30000000000003,
+          "final_distance": 0.0
+        },
+        {
+          "success": true,
+          "steps": 50,
+          "total_reward": -2.0000000000000178,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 2,
+        "failure_count": 0,
+        "success_rate": 1.0,
+        "average_steps": 70.5,
+        "average_steps_on_success": 70.5
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -31.00000000000005,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -25.00000000000004,
+          "final_distance": 6.324555320336759
+        }
+      ]
+    },
+    {
+      "raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.0000000000000036,
+          "final_distance": 5.0990195135927845
+        },
+        {
+          "success": true,
+          "steps": 73,
+          "total_reward": 18.699999999999996,
+          "final_distance": 0.0
+        }
+      ],
+      "calculated": {
+        "success_count": 1,
+        "failure_count": 1,
+        "success_rate": 0.5,
+        "average_steps": 86.5,
+        "average_steps_on_success": 73.0
+      },
+      "q_table_unchanged": true,
+      "epsilon_unchanged": true,
+      "same_training_agent": true,
+      "train_raw": [
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -10.999999999999979,
+          "final_distance": 7.0710678118654755
+        },
+        {
+          "success": false,
+          "steps": 100,
+          "total_reward": -4.999999999999995,
+          "final_distance": 6.324555320336759
+        }
+      ]
+    }
+  ],
+  "checks": {
+    "csv_matches_summary": true,
+    "cli_matches_observed_rerun": true,
+    "all_agents_distinct": true,
+    "config_unchanged": true
+  }
+}

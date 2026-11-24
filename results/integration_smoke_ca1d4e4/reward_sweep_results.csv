@@ -1,0 +1,6 @@
+name,reward_up,reward_keep,reward_down,move_cost,terminal_reward,train_episodes,train_success_rate,train_average_steps,train_average_total_reward,eval_episodes,eval_success_rate,eval_average_steps,eval_average_steps_on_success,eval_failure_count
+baseline,1.0,0.0,-1.0,0.1,10.0,2,0.0,100.0,-7.999999999999987,2,0.5,86.5,73.0,1
+strong_up,2.0,0.0,-1.0,0.1,10.0,2,0.0,100.0,14.999999999999993,2,0.5,92.0,84.0,1
+strong_down_penalty,1.0,0.0,-2.0,0.1,10.0,2,0.0,100.0,-31.00000000000005,2,1.0,39.5,39.5,0
+high_move_cost,1.0,0.0,-1.0,0.3,10.0,2,0.0,100.0,-28.000000000000043,2,1.0,70.5,70.5,0
+high_terminal_reward,1.0,0.0,-1.0,0.1,20.0,2,0.0,100.0,-7.999999999999987,2,0.5,86.5,73.0,1
