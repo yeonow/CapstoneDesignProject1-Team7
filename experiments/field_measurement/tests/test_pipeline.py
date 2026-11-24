@@ -15,6 +15,21 @@ from experiments.field_measurement.analysis.trend import transitions
 from test_collection import BSSID, beacon
 
 
+@pytest.mark.parametrize("content,message", [
+    (b"", "Invalid CSV headers"),
+    (b"rssi_dbm,rssi_dbm\n-55,-70\n", "Invalid CSV headers"),
+    (b"distance_m,\n1,-55\n", "Invalid CSV headers"),
+    (b'distance_m,rssi_dbm\n1,"-55\n', "Malformed CSV"),
+])
+def test_raw_and_prepared_csv_reject_invalid_structure(tmp_path, content, message):
+    path = tmp_path / "broken.csv"
+    path.write_bytes(content)
+    with pytest.raises(ValueError, match=message):
+        preparation.read_csv(preparation.CaptureDirectory(tmp_path), path.name)
+    with pytest.raises(ValueError, match=message):
+        analysis.load_csv(path)
+
+
 def source_run(folder, run, distance, count, intercept, day):
     directory = folder / run
     directory.mkdir(parents=True)

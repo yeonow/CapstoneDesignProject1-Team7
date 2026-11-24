@@ -2,7 +2,6 @@
 
 import argparse
 from collections import defaultdict
-import csv
 import hashlib
 import io
 import json
@@ -20,7 +19,7 @@ from scipy import stats
 from src.state_reward import _cfg
 
 from .compare_simulation import compare
-from .prepare_field_data import require, write_csv
+from .prepare_field_data import parse_csv_rows, require, write_csv
 from .trend import analyze_trends, ordered_legs
 from ..collect import DISTANCES
 
@@ -48,10 +47,7 @@ def load_csv(path, *, content=None):
     if content is None:
         content = path.read_bytes()
     with io.StringIO(content.decode("utf-8-sig"), newline="") as stream:
-        rows = list(csv.DictReader(stream))
-    require(all(None not in row and None not in row.values() for row in rows),
-            f"Malformed file: {path.name}")
-    return rows
+        return parse_csv_rows(stream, path.name)
 
 
 def distance_statistics(groups):

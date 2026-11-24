@@ -39,12 +39,23 @@ class CaptureDirectory:
         return None
 
 
-def read_csv(archive, path):
-    with archive.open(path) as raw:
-        rows = list(csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig")))
+def parse_csv_rows(stream, label):
+    try:
+        reader = csv.DictReader(stream, strict=True)
+        headers = reader.fieldnames
+        require(headers and all(name.strip() for name in headers)
+                and len(headers) == len(set(headers)), f"Invalid CSV headers: {label}")
+        rows = list(reader)
+    except csv.Error as exc:
+        raise ValueError(f"Malformed CSV: {label}: {exc}") from exc
     require(all(None not in row and None not in row.values() for row in rows),
-            f"Malformed CSV: {path}")
+            f"Malformed CSV: {label}")
     return rows
+
+
+def read_csv(archive, path):
+    with archive.open(path) as raw, io.TextIOWrapper(raw, encoding="utf-8-sig", newline="") as stream:
+        return parse_csv_rows(stream, path)
 
 
 def write_csv(path, fields, rows):
