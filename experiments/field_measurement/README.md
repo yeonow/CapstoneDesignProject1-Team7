@@ -41,6 +41,8 @@ sudo python3 -m experiments.field_measurement.collect --interface wlan1 \
 
 기존 ZIP 또는 새 수집기의 디렉터리를 입력으로 사용한다. `--channel` 기본값은 기존 실험의 채널 9다. 직접 실행하던 `python experiments/field_measurement/analysis/prepare_field_data.py ...` 명령도 사용할 수 있다.
 
+새 형식은 완료 표시의 시각·전원 상태와 런 폴더에 해당하는 요약을 확인한다. 총괄 요약을 함께 보관한 경우 완료 런들의 요약과 내용이 일치해야 한다.
+
 ```powershell
 python -m experiments.field_measurement.analysis.prepare_field_data `
   "$env:USERPROFILE\Downloads\rssi_experiments.zip" --channel 9 --15m-run last `
@@ -65,7 +67,7 @@ Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 �
 
 ## 통계 분석 및 시뮬레이션 비교
 
-분석은 Python 3.10 이상이 필요하다. 전처리 메타데이터에 분석 입력의 SHA-256이 있으면 두 CSV의 실제 해시가 일치하는지 먼저 확인한다. 서로 다른 전처리 실행의 파일이 섞였으면 같은 원본으로 전처리부터 다시 실행한다.
+분석은 Python 3.10 이상이 필요하다. 전처리 메타데이터에 분석 입력의 SHA-256이 있으면 두 CSV의 실제 해시가 일치하는지 먼저 확인한다. 보고서 계산에는 해시를 확인한 것과 동일한 CSV 내용을 사용한다. 서로 다른 전처리 실행의 파일이 섞였으면 같은 원본으로 전처리부터 다시 실행한다.
 
 ```powershell
 python -m pip install -r experiments/field_measurement/analysis/requirements.txt
