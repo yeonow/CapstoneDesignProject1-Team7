@@ -18,3 +18,12 @@ venv/
 
 # Experiment Results
 results/
+
+# Private field measurements and exported archives
+/experiments/field_analysis_prepared/
+rssi_experiments.zip
+field_analysis_prepared.zip
+*.pcap
+*.pcapng
+*.pcap.gz
+*.pcapng.gz
