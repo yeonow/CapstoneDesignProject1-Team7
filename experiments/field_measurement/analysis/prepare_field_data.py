@@ -9,10 +9,15 @@ import json
 import re
 import shutil
 import statistics
+import sys
 import tempfile
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    __package__ = "experiments.field_measurement.analysis"
 
 from ..beacons import beacon_rssi, decode
 from ..collect import DIRECTIONS, DISTANCES, DURATION, MIN_PACKETS
@@ -173,7 +178,7 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
     scenario1 = []
     for distance in DISTANCES:
         candidates = runs[distance]
-        require(len(candidates) >= 1 if distance == 15 else len(candidates) == 1,
+        require(distance == 15 or len(candidates) == 1,
                 f"Unexpected run count at {distance} m; review manually")
         ordered = sorted(candidates, key=lambda k: (min(map(capture_time, candidates[k])), k))
         chosen = ordered[-1] if distance == 15 and fifteen_meter_run == "last" else ordered[0]

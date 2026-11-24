@@ -50,7 +50,8 @@ def beacon_rssi(row, bssid, channel):
         return None
     try:
         if float(row["radiotap.channel.freq"]) == frequency(channel):
-            value = int(row["radiotap.dbm_antsignal"])
+            # Preserve the legacy first-antenna reading while collecting all DS/HT IEs.
+            value = int(row["radiotap.dbm_antsignal"].split(";", 1)[0])
             if -128 <= value < 0:
                 return value
     except ValueError:
