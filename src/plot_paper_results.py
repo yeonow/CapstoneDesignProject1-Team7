@@ -3,6 +3,7 @@
 import argparse
 import csv
 import math
+import textwrap
 from pathlib import Path
 
 import matplotlib
@@ -98,6 +99,22 @@ def _add_ci(ax, x, row, metric, color):
                 fmt="none", ecolor=color, capsize=4, linewidth=1.3)
 
 
+def _caption(rows, metric, noise):
+    """Noise 지점이 많아도 성공 횟수 설명이 그림 밖으로 길게 늘어나지 않게 한다."""
+    paragraphs = ["Error bars: 95% Student's t CI across runs (not SD); unavailable for n < 2."]
+    if metric == "average_steps_on_success":
+        paragraphs.append("Successful episodes (conditional steps; also inspect success rate):")
+        for algorithm, label, *_ in ALGORITHMS:
+            selected = [row for row in rows if row["algorithm"] == algorithm]
+            if noise:
+                selected.sort(key=lambda row: row["noise_std"])
+            if selected:
+                counts = "; ".join((f"{row['noise_std']:g} dB=" if noise else "")
+                                   + str(int(row["success_count_total"])) for row in selected)
+                paragraphs.append(f"{label}: {counts}")
+    return "\n".join(textwrap.fill(text, width=90, break_long_words=False) for text in paragraphs)
+
+
 def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
     """한 지표의 평균과 CI를 그리며 결측 Noise 지점을 연결하거나 보간하지 않는다."""
     if not rows:
@@ -109,7 +126,10 @@ def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
     output_base.parent.mkdir(parents=True, exist_ok=True)
     with plt.rc_context({"font.size": 10, "axes.titlesize": 12, "axes.labelsize": 10,
                          "lines.linewidth": 1.7, "pdf.fonttype": 42, "figure.facecolor": "white"}):
-        fig, ax = plt.subplots(figsize=(6.4, 4.6))
+        caption = _caption(rows, metric, noise)
+        footer_height = 0.18 * len(caption.splitlines()) + 0.12
+        height = 4.4 + footer_height
+        fig, ax = plt.subplots(figsize=(6.4, height))
         try:
             any_values = False
             if noise:
@@ -148,13 +168,8 @@ def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
             ax.grid(axis="y", alpha=0.25)
             ax.set_axisbelow(True)
             ax.legend()
-            caption = "Error bars: 95% Student's t CI across runs (not SD); unavailable for n < 2."
-            if metric == "average_steps_on_success":
-                counts = "; ".join(f"{row['algorithm']}" + (f" @ {row['noise_std']:g} dB" if noise else "")
-                                   + f": {int(row['success_count_total'])}" for row in rows)
-                caption += "\nSuccessful episodes: " + counts
-            fig.text(0.5, 0.015, caption, ha="center", fontsize=7, wrap=True)
-            fig.tight_layout(rect=(0, 0.12 if metric == "average_steps_on_success" else 0.07, 1, 1))
+            fig.text(0.5, 0.015, caption, ha="center", va="bottom", fontsize=8)
+            fig.tight_layout(rect=(0, footer_height / height, 1, 1))
             paths = []
             for suffix in (".png", ".pdf"):
                 path = output_base.with_suffix(suffix)
