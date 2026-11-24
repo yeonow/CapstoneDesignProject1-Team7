@@ -16,8 +16,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 from scipy import stats
+from src.state_reward import _cfg
 
 from .prepare_field_data import require, write_csv
+from .trend import analyze_trends, ordered_legs
 from ..collect import DISTANCES
 
 
@@ -135,11 +137,16 @@ def main():
     parser.add_argument("--include-provisional", action="store_true")
     args = parser.parse_args()
     source = args.prepared / "scenario1_strict_provisional.csv"
+    motion = args.prepared / "scenario2.csv"
+    legs = list(ordered_legs(load_csv(motion)))
     args.output.mkdir(parents=True, exist_ok=True)
     _, report = analyze_static(source, args.output, args.include_provisional)
     report.update({
+        "trend_threshold_db": _cfg("TREND_THRESHOLD"),
+        "trend_accuracy": analyze_trends(legs, args.output),
         "includes_provisional_15m": args.include_provisional,
         "scenario1_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "scenario2_sha256": hashlib.sha256(motion.read_bytes()).hexdigest(),
         "versions": {"python": platform.python_version(), "numpy": np.__version__,
                      "scipy": scipy.__version__, "matplotlib": matplotlib.__version__},
     })
