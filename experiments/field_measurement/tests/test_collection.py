@@ -39,6 +39,19 @@ def test_multi_antenna_frames_keep_legacy_first_signal():
     assert beacon_rssi(row, BSSID, 9) == -60
 
 
+@pytest.mark.parametrize("time", ["", "nan", "inf", -1, 0.25, 9])
+def test_invalid_timestamps_do_not_qualify_a_capture(time):
+    rows = [(beacon(time=index / 2), -60) for index in range(10)]
+    assert collect.covers_sample_window(rows)
+    rows[3][0]["frame.time_relative"] = str(time)
+    assert not collect.covers_sample_window(rows)
+
+
+def test_compact_packet_burst_does_not_cover_a_full_sample():
+    rows = [(beacon(time=index / 10), -60) for index in range(10)]
+    assert not collect.covers_sample_window(rows)
+
+
 def test_adapter_identity_and_power(tmp_path, monkeypatch):
     adapter = tmp_path / "wlan1" / "device"
     adapter.mkdir(parents=True)

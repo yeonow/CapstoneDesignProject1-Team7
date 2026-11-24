@@ -4,6 +4,7 @@ import argparse
 import csv
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -28,6 +29,18 @@ SUMMARY_COLUMNS = (*CONTEXT, "duration_s", "bssid", "frequency_mhz", "packet_cou
 
 def timestamp():
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def covers_sample_window(accepted):
+    if len(accepted) < MIN_PACKETS:
+        return False
+    try:
+        times = [float(row["frame.time_relative"]) for row, _ in accepted]
+    except ValueError:
+        return False
+    return (all(math.isfinite(elapsed) and elapsed >= 0 for elapsed in times)
+            and all(previous <= current for previous, current in zip(times, times[1:]))
+            and times[-1] - times[0] >= DURATION - 1)
 
 
 def capture(radio, channel, bssid, path, duration):
@@ -120,8 +133,7 @@ def run(args):
                     signals = sample_values(rows, args.bssid, channel)
                     accepted = [(row, value) for row, value in zip(rows, signals or [])
                                 if value is not None]
-                    times = [float(row["frame.time_relative"]) for row, _ in accepted]
-                    if len(accepted) >= MIN_PACKETS and max(times) - min(times) >= DURATION - 1:
+                    if covers_sample_window(accepted):
                         break
                     detected = discover(radio, args, probe_dir, channel)
                     if detected != channel:
