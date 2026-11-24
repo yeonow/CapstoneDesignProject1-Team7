@@ -1,7 +1,6 @@
 """네 가지 비교 지표를 Run별 평균과 표본 표준편차 오차 막대로 시각화한다."""
 
 import argparse
-import csv
 import math
 from pathlib import Path
 
@@ -11,7 +10,7 @@ import config
 
 
 METRICS = (
-    ("success_rate", "Success rate", "Success rate"),
+    ("success_rate", "Success rate", "Success rate (fraction)"),
     ("average_steps", "Average steps (all episodes)", "Steps"),
     ("average_steps_on_success", "Average steps on success", "Steps"),
     ("average_final_distance", "Average final distance", "Distance (grid units)"),
@@ -31,16 +30,31 @@ def _number(value):
 
 
 def load_summary(input_path):
-    """알고리즘 이름은 문자열로 유지하고, 빈 값이나 유한하지 않은 지표는 None으로 읽는다."""
-    with Path(input_path).open(newline="", encoding="utf-8") as file:
-        rows = list(csv.DictReader(file))
-    return [
-        {key: value if key == "algorithm" else _number(value) for key, value in row.items()}
-        for row in rows
-    ]
+    """빈 성공 Step만 결측으로 읽고 손상된 숫자를 결측으로 숨기지 않는다."""
+    from src.analyze_paper_results import read_result_csv
+    from src.compare_noise_sweep import METRICS as metric_names, NOISE_SUMMARY_FIELDS
+
+    rows = read_result_csv(input_path, NOISE_SUMMARY_FIELDS)
+    keys = [(row["noise_std"], row["algorithm"]) for row in rows]
+    if len(keys) != len(set(keys)):
+        raise ValueError("중복된 Noise/알고리즘 Summary 행")
+    for row in rows:
+        if row["run_count"] < 1 or row["eval_episodes"] < 1:
+            raise ValueError("Run/평가 Episode 수는 양수여야 합니다.")
+        for metric in metric_names:
+            mean, sd, count = (row[f"{metric}_{suffix}"] for suffix in ("mean", "std", "run_count"))
+            if count is None or not 0 <= count <= row["run_count"]:
+                raise ValueError(f"유효 Run 수 오류: {metric}")
+            if metric != "average_steps_on_success" and count != row["run_count"]:
+                raise ValueError(f"전체 Run 지표의 표본 수 누락: {metric}")
+            if (mean is None) != (count == 0) or (sd is None) != (count == 0):
+                raise ValueError(f"결측값과 유효 Run 수 불일치: {metric}")
+        if not 0 <= row["success_rate_mean"] <= 1:
+            raise ValueError("성공률은 0~1 비율이어야 합니다.")
+    return rows
 
 
-def plot_noise_comparison(rows, output_path=None):
+def plot_noise_comparison(rows, output_path=None, *, success_percent=False, dpi=160):
     """GUI 없이 2×2 그래프를 저장하며, 평균의 결측값은 0 대신 빈 구간으로 표시한다.
 
     표준편차가 없으면 오차 막대를 표시하지 않는다. 성공이 없는 Run은
@@ -48,9 +62,17 @@ def plot_noise_comparison(rows, output_path=None):
     """
     if not rows:
         raise ValueError("rows must not be empty.")
-    rows = [row for row in rows if _number(row.get("noise_std")) is not None]
-    if not rows:
-        raise ValueError("rows must contain a finite noise_std.")
+    if isinstance(dpi, bool) or not isinstance(dpi, int) or dpi < 1:
+        raise ValueError("dpi must be a positive integer")
+    keys = set()
+    for row in rows:
+        noise = _number(row.get("noise_std"))
+        if noise is None or noise < 0 or row.get("algorithm") not in {a[0] for a in ALGORITHMS}:
+            raise ValueError("rows must contain a nonnegative finite noise_std and known algorithm.")
+        key = noise, row["algorithm"]
+        if key in keys:
+            raise ValueError("duplicate noise/algorithm row")
+        keys.add(key)
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -63,6 +85,7 @@ def plot_noise_comparison(rows, output_path=None):
     try:
         for ax, (metric, title, ylabel) in zip(axes.flat, METRICS):
             any_values = False
+            scale = 100 if success_percent and metric == "success_rate" else 1
             for algorithm, label, color, marker in ALGORITHMS:
                 by_noise = {float(row["noise_std"]): row for row in rows
                             if row.get("algorithm") == algorithm}
@@ -71,10 +94,13 @@ def plot_noise_comparison(rows, output_path=None):
                     row = by_noise.get(noise, {})
                     mean = _number(row.get(f"{metric}_mean"))
                     std = _number(row.get(f"{metric}_std"))
+                    mean = mean * scale if mean is not None else None
+                    std = std * scale if std is not None else None
                     means.append(mean if mean is not None else math.nan)
                     if mean is not None:
                         any_values = True
-                        if std is not None and std >= 0:
+                        count = row.get(f"{metric}_run_count", row.get("run_count"))
+                        if std is not None and std >= 0 and (count is None or count >= 2):
                             error_x.append(noise)
                             error_means.append(mean)
                             errors.append(std)
@@ -86,15 +112,16 @@ def plot_noise_comparison(rows, output_path=None):
                 ax.text(0.5, 0.5, "No valid runs", ha="center", va="center", transform=ax.transAxes)
             ax.set_title(title)
             ax.set_xlabel("Noise standard deviation (dB)")
-            ax.set_ylabel(ylabel)
+            ax.set_ylabel("Success rate (%)" if scale == 100 else ylabel)
             ax.set_xticks(noise_stds)
             ax.grid(alpha=0.3)
             ax.legend()
         fig.suptitle("Q-Learning vs Random: mean ± sample standard deviation across runs")
-        fig.text(0.5, 0.015, "Successful-step metrics use only runs with successes; missing values remain gaps.",
+        fig.text(0.5, 0.015, "Error bars: sample SD (not CI); omitted for n < 2.\n"
+                 "Successful-step metrics use only runs with successes; missing values remain gaps.",
                  ha="center", fontsize=9)
         fig.tight_layout(rect=(0, 0.04, 1, 0.95))
-        fig.savefig(output_path, dpi=160, bbox_inches="tight")
+        fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
     finally:
         plt.close(fig)
     return output_path
@@ -107,8 +134,11 @@ def main():
                         default=root / config.RESULTS_DIR / "noise_comparison_summary.csv")
     parser.add_argument("--output", type=Path,
                         default=root / config.RESULTS_DIR / "noise_comparison.png")
+    parser.add_argument("--percent", action="store_true", help="Display success rate and SD in percent units.")
+    parser.add_argument("--dpi", type=int, default=160)
     args = parser.parse_args()
-    saved = plot_noise_comparison(load_summary(args.input), args.output)
+    saved = plot_noise_comparison(load_summary(args.input), args.output,
+                                  success_percent=args.percent, dpi=args.dpi)
     print(f"Noise comparison plot saved to: {saved}")
 
 

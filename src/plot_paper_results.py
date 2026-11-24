@@ -3,6 +3,7 @@
 import argparse
 import csv
 import math
+import textwrap
 from pathlib import Path
 
 import matplotlib
@@ -24,13 +25,15 @@ def load_performance_table(path):
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"분석 결과가 없습니다: {path}. 먼저 python -m src.analyze_paper_results 를 실행하세요.")
-    with path.open(newline="", encoding="utf-8") as file:
+    with path.open(newline="", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
         required = {"algorithm", "noise_std", "run_count", "success_count_total"}
         required.update(f"{metric}_{suffix}" for metric, *_ in FIGURES
                         for suffix in ("mean", "ci95_low", "ci95_high", "valid_run_count"))
         if not required <= set(reader.fieldnames or []):
             raise ValueError(f"논문용 표의 필수 열이 없습니다: {path}")
+        if len(reader.fieldnames) != len(set(reader.fieldnames)):
+            raise ValueError(f"논문용 표의 중복 열: {path}")
         rows = []
         for raw in reader:
             if None in raw or any(value is None for value in raw.values()):
@@ -44,15 +47,45 @@ def load_performance_table(path):
                 elif value == "":
                     row[key] = None
                 else:
-                    number = float(value)
+                    try:
+                        number = float(value)
+                    except ValueError:
+                        raise ValueError(f"잘못된 그래프 숫자: {path}/{key}={value!r}") from None
                     if not math.isfinite(number):
                         raise ValueError(f"유한하지 않은 그래프 입력값: {path}/{key}")
                     row[key] = number
+            _validate_performance_row(row, path)
             rows.append(row)
     keys = [(row["noise_std"], row["algorithm"]) for row in rows]
     if len(keys) != len(set(keys)):
         raise ValueError(f"논문용 표에 중복된 알고리즘·Noise 행이 있습니다: {path}")
     return rows
+
+
+def _validate_performance_row(row, path):
+    """평균의 물리 범위와 표본 수를 검사하되 범위 밖 t CI는 자르지 않는다."""
+    for key in ("run_count", "success_count_total"):
+        value = row[key]
+        if value is None or value < (1 if key == "run_count" else 0) or not value.is_integer():
+            raise ValueError(f"잘못된 표본 수: {path}/{key}")
+    if row["noise_std"] is not None and row["noise_std"] < 0:
+        raise ValueError(f"음수 Noise: {path}")
+    for metric, *_ in FIGURES:
+        mean, low, high, count = (row[f"{metric}_{suffix}"] for suffix in
+                                  ("mean", "ci95_low", "ci95_high", "valid_run_count"))
+        if count is None or not count.is_integer() or not 0 <= count <= row["run_count"]:
+            raise ValueError(f"잘못된 유효 Run 수: {path}/{metric}")
+        if metric != "average_steps_on_success" and count != row["run_count"]:
+            raise ValueError(f"전체 Run 지표의 표본 수 누락: {path}/{metric}")
+        if (mean is None) != (count == 0):
+            raise ValueError(f"평균과 유효 Run 수 불일치: {path}/{metric}")
+        if mean is not None and (mean < 0 or (metric == "success_rate_percent" and mean > 100)):
+            raise ValueError(f"평균 범위 오류: {path}/{metric}")
+        if count < 2:
+            if low is not None or high is not None:
+                raise ValueError(f"표본 부족인데 신뢰구간이 존재함: {path}/{metric}")
+        elif low is None or high is None or not low <= mean <= high:
+            raise ValueError(f"신뢰구간 누락 또는 순서 오류: {path}/{metric}")
 
 
 def _add_ci(ax, x, row, metric, color):
@@ -66,6 +99,22 @@ def _add_ci(ax, x, row, metric, color):
                 fmt="none", ecolor=color, capsize=4, linewidth=1.3)
 
 
+def _caption(rows, metric, noise):
+    """Noise 지점이 많아도 성공 횟수 설명이 그림 밖으로 길게 늘어나지 않게 한다."""
+    paragraphs = ["Error bars: 95% Student's t CI across runs (not SD); unavailable for n < 2."]
+    if metric == "average_steps_on_success":
+        paragraphs.append("Successful episodes (conditional steps; also inspect success rate):")
+        for algorithm, label, *_ in ALGORITHMS:
+            selected = [row for row in rows if row["algorithm"] == algorithm]
+            if noise:
+                selected.sort(key=lambda row: row["noise_std"])
+            if selected:
+                counts = "; ".join((f"{row['noise_std']:g} dB=" if noise else "")
+                                   + str(int(row["success_count_total"])) for row in selected)
+                paragraphs.append(f"{label}: {counts}")
+    return "\n".join(textwrap.fill(text, width=90, break_long_words=False) for text in paragraphs)
+
+
 def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
     """한 지표의 평균과 CI를 그리며 결측 Noise 지점을 연결하거나 보간하지 않는다."""
     if not rows:
@@ -77,7 +126,10 @@ def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
     output_base.parent.mkdir(parents=True, exist_ok=True)
     with plt.rc_context({"font.size": 10, "axes.titlesize": 12, "axes.labelsize": 10,
                          "lines.linewidth": 1.7, "pdf.fonttype": 42, "figure.facecolor": "white"}):
-        fig, ax = plt.subplots(figsize=(6.4, 4.6))
+        caption = _caption(rows, metric, noise)
+        footer_height = 0.18 * len(caption.splitlines()) + 0.12
+        height = 4.4 + footer_height
+        fig, ax = plt.subplots(figsize=(6.4, height))
         try:
             any_values = False
             if noise:
@@ -116,13 +168,8 @@ def plot_metric(rows, metric, title, ylabel, output_base, noise=False):
             ax.grid(axis="y", alpha=0.25)
             ax.set_axisbelow(True)
             ax.legend()
-            caption = "Error bars: 95% Student's t CI across runs (not SD); unavailable for n < 2."
-            if metric == "average_steps_on_success":
-                counts = "; ".join(f"{row['algorithm']}" + (f" @ {row['noise_std']:g} dB" if noise else "")
-                                   + f": {int(row['success_count_total'])}" for row in rows)
-                caption += "\nSuccessful episodes: " + counts
-            fig.text(0.5, 0.015, caption, ha="center", fontsize=7, wrap=True)
-            fig.tight_layout(rect=(0, 0.12 if metric == "average_steps_on_success" else 0.07, 1, 1))
+            fig.text(0.5, 0.015, caption, ha="center", va="bottom", fontsize=8)
+            fig.tight_layout(rect=(0, footer_height / height, 1, 1))
             paths = []
             for suffix in (".png", ".pdf"):
                 path = output_base.with_suffix(suffix)
@@ -141,6 +188,8 @@ def plot_paper_results(input_dir=None, output_dir=None):
     output_dir = root / output_dir if output_dir is not None else results / "paper_figures"
     basic = load_performance_table(input_dir / "algorithm_performance.csv")
     noise_rows = load_performance_table(input_dir / "noise_performance.csv")
+    if any(row["noise_std"] is not None for row in basic) or any(row["noise_std"] is None for row in noise_rows):
+        raise ValueError("기본 비교와 Noise 비교 표의 noise_std 구분이 잘못되었습니다.")
     if not basic and not noise_rows:
         raise ValueError("분석 가능한 표가 없습니다. 분석 보고서의 검증 실패 내용을 확인하세요.")
     paths = []

@@ -154,3 +154,48 @@ def test_independent_plot_module_cli(fixed_tables):
     )
     assert process.returncode == 0
     assert len(list((directory / "cli").glob("*.pdf"))) == 8
+
+
+@pytest.mark.parametrize("field,value", [
+    ("run_count", 1.5), ("run_count", None), ("success_count_total", -1),
+    ("noise_std", -2), ("success_rate_percent_mean", 101),
+    ("average_steps_mean", -1), ("average_steps_mean", None),
+    ("average_steps_valid_run_count", 3), ("average_steps_ci95_low", 999),
+    ("average_steps_ci95_high", None), ("average_steps_mean", "broken"),
+])
+def test_loader_rejects_impossible_statistics_before_plotting(fixed_tables, field, value):
+    directory, rows, _ = fixed_tables
+    rows[0][field] = value
+    path = directory / "synthetic-invalid.csv"
+    analysis._write_csv(path, rows, analysis.PERFORMANCE_FIELDS)
+    with pytest.raises(ValueError):
+        plotting.load_performance_table(path)
+
+
+def test_loader_rejects_duplicate_headers_but_accepts_utf8_bom(fixed_tables):
+    directory, _, _ = fixed_tables
+    path = directory / "algorithm_performance.csv"
+    original = path.read_text(encoding="utf-8")
+    path.write_text(original, encoding="utf-8-sig")
+    assert len(plotting.load_performance_table(path)) == 2
+    lines = original.splitlines()
+    lines[0] += ",algorithm"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    with pytest.raises(ValueError, match="중복 열"):
+        plotting.load_performance_table(path)
+
+
+def test_five_noise_success_caption_fits_without_hiding_counts(tmp_path):
+    # 발표용 수치가 아닌 긴 캡션 배치 검증용 가상 값이다.
+    rows = [{"algorithm": algorithm, "noise_std": level, "success_count_total": 1234 + level,
+             "average_steps_on_success_mean": 40.0, "average_steps_on_success_valid_run_count": 1}
+            for algorithm in ("q_learning", "random") for level in (2, 4, 6, 8, 10)]
+    caption = plotting._caption(rows, "average_steps_on_success", True)
+    assert all(len(line) <= 90 for line in caption.splitlines())
+    assert "not SD" in caption and "also inspect success rate" in caption
+    for level in (2, 4, 6, 8, 10):
+        assert caption.count(f"{level} dB={1234 + level}") == 2
+    paths = plotting.plot_metric(rows, "average_steps_on_success", "Synthetic test", "Steps",
+                                 tmp_path / "caption", noise=True)
+    with Image.open(paths[0]) as picture:
+        assert picture.width <= 2100  # 긴 단일 캡션 때문에 가로 폭이 늘어나는 회귀 방지

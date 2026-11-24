@@ -280,3 +280,174 @@ def test_analysis_module_cli(fixed_csvs):
     )
     assert process.returncode == 0
     assert (directory / "cli" / "paper_analysis_summary.md").exists()
+
+
+@pytest.mark.parametrize("x,y", [("1.5", "2"), ("-1", "2"), ("NaN", "2"), ("", "2")])
+def test_optional_target_coordinates_reject_malformed_values(tmp_path, x, y):
+    path = tmp_path / "synthetic.csv"
+    path.write_text(f"algorithm,target_x,target_y\nq_learning,{x},{y}\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+
+
+def test_optional_target_columns_preserve_legacy_and_integer_coordinates(tmp_path):
+    path = tmp_path / "synthetic.csv"
+    path.write_text("algorithm,target_x,target_y\nq_learning,3,4\nrandom,,\n", encoding="utf-8")
+    rows = analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+    assert rows[0]["target_x"] == 3 and isinstance(rows[0]["target_x"], int)
+    assert rows[1]["target_x"] is rows[1]["target_y"] is None
+    path.write_text("algorithm,target_x\nq_learning,3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Target"):
+        analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+
+
+@pytest.mark.parametrize("noise", [False, True])
+def test_target_pairing_checks_coordinates_without_changing_metrics(fixed_csvs, noise):
+    directory, data = fixed_csvs
+    name = "noise_comparison_episodes.csv" if noise else "algorithm_comparison_episodes.csv"
+    rows, fields = data[name]
+    for row in rows:
+        row.update(target_x=row["episode"], target_y=4)
+    write_csv(directory / name, rows, fields)
+    assert analysis.validate_dataset(directory, noise=noise)["valid"]
+    rows[0]["target_x"] += 1
+    write_csv(directory / name, rows, fields)
+    status = analysis.validate_dataset(directory, noise=noise)
+    assert not status["valid"] and "Target 불일치" in "\n".join(status["errors"])
+
+
+def test_target_coverage_is_not_silently_partial(fixed_csvs):
+    directory, data = fixed_csvs
+    rows, fields = data["algorithm_comparison_episodes.csv"]
+    rows[0].update(target_x=3, target_y=4)
+    write_csv(directory / "algorithm_comparison_episodes.csv", rows, fields)
+    status = analysis.validate_dataset(directory)
+    assert not status["valid"] and "Target 좌표 누락" in "\n".join(status["errors"])
+
+
+def test_legacy_csv_explicitly_reports_unverified_targets(fixed_csvs):
+    directory, _ = fixed_csvs
+    status = analysis.validate_dataset(directory)
+    assert status["valid"]
+    assert any("Target" in message and "검증하지 못" in message for message in status["warnings"])
+
+
+def test_episode_to_paper_statistics_keep_success_population_and_equal_run_weight(fixed_csvs):
+    """가상 원시 Episode로 성공률·조건부 Step·Run SD를 독립적으로 재계산한다."""
+    directory, data = fixed_csvs
+    episodes, fields = data["algorithm_comparison_episodes.csv"]
+    runs, run_fields = data["algorithm_comparison_summary.csv"]
+    for row in episodes:
+        success = row["algorithm"] == "q_learning" and (row["run"] == 2 or row["episode"] == 1)
+        row.update(success=success, final_distance=0.0 if success else 3.0,
+                   steps=(2 if row["run"] == 1 else 2 + 2 * row["episode"]) if success else 10)
+    for row in runs:
+        subset = [ep for ep in episodes if (ep["run"], ep["algorithm"]) == (row["run"], row["algorithm"])]
+        row.update(calculate_metrics(subset))
+    write_csv(directory / "algorithm_comparison_episodes.csv", episodes, fields)
+    write_csv(directory / "algorithm_comparison_summary.csv", runs, run_fields)
+    status = analysis.validate_dataset(directory)
+    assert status["valid"]
+    tables = {row["algorithm"]: row for row in analysis.summarize_runs(status["runs"])}
+    q, random_row = tables["q_learning"], tables["random"]
+    assert q["success_rate_percent_mean"] == pytest.approx(200 / 3)
+    assert q["success_rate_percent_std"] == pytest.approx((200 / 3) / math.sqrt(2))
+    assert q["average_steps_on_success_mean"] == 4  # Run 평균(2,6); 성공 Episode를 합친 평균은 5
+    assert q["average_steps_on_success_std"] == pytest.approx(math.sqrt(8))
+    assert q["average_steps_mean"] == pytest.approx(20 / 3)
+    assert q["success_count_total"] == 4 and q["failure_count_total"] == 2
+    assert random_row["success_rate_percent_mean"] == 0
+    assert random_row["average_steps_mean"] == 10
+    assert random_row["average_steps_on_success_mean"] is None
+    assert random_row["average_steps_on_success_valid_run_count"] == 0
+    stats, pairs = analysis.paired_comparisons(status["runs"], "algorithm")
+    assert not any(p["metric"] == "average_steps_on_success" for p in pairs)
+    assert next(s for s in stats if s["metric"] == "success_rate")["valid_run_count"] == 2
+    assert analysis.summarize_runs(list(reversed(status["runs"]))) == list(tables.values())
+
+
+def test_safe_graph_pipeline_does_not_train_or_overwrite(fixed_csvs, monkeypatch):
+    import json
+    from src import compare_algorithms, compare_noise_sweep, graph_pipeline
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("CSV 그래프 재생성에서 학습은 금지")
+
+    monkeypatch.setattr(compare_algorithms, "train_q_learning_agent", forbidden)
+    monkeypatch.setattr(compare_noise_sweep, "train_q_learning_agent", forbidden)
+    directory, _ = fixed_csvs
+    before = {p: p.read_bytes() for p in directory.glob("*.csv")}
+    result = graph_pipeline.generate_graphs(directory, directory / "outputs", "test", dataset="algorithm")
+    assert len(result["artifacts"]) == 9  # 표 1개 + PNG/PDF 4쌍
+    manifest = json.loads(result["manifest"].read_text(encoding="utf-8"))
+    assert len(manifest["inputs"]) == 2 and len(manifest["artifacts"]) == 9
+    assert "95%" in manifest["options"]["error_bars"]
+    with pytest.raises(FileExistsError):
+        graph_pipeline.generate_graphs(directory, directory / "outputs", "test", dataset="algorithm")
+    assert all(p.read_bytes() == content for p, content in before.items())
+
+
+def test_safe_graph_pipeline_invalid_input_creates_no_output(fixed_csvs):
+    from src.graph_pipeline import generate_graphs
+    directory, _ = fixed_csvs
+    (directory / "algorithm_comparison_summary.csv").write_text("broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="검증 실패"):
+        generate_graphs(directory, directory / "never", "test", dataset="algorithm")
+    assert not (directory / "never").exists()
+
+
+def test_safe_graph_pipeline_cli_only_reads_synthetic_csvs(fixed_csvs):
+    directory, _ = fixed_csvs
+    process = subprocess.run([
+        sys.executable, "-m", "src.graph_pipeline", "--input-dir", str(directory),
+        "--output-root", str(directory / "cli-safe"), "--name", "test", "--dataset", "noise",
+    ], cwd=Path(__file__).resolve().parents[1], capture_output=True)
+    assert process.returncode == 0, process.stderr
+    assert b"Training episode" not in process.stdout
+    output = directory / "cli-safe" / "pre_calibration" / "test"
+    assert (output / "graph_manifest.json").exists()
+    assert len(list((output / "paper_figures").glob("*.png"))) == 4
+
+
+def test_step_comparison_recomputes_actual_runs_and_sd(fixed_csvs, monkeypatch):
+    from copy import deepcopy
+    import matplotlib.pyplot as plt
+    from src import plot_step_comparison as steps
+
+    directory, data = fixed_csvs
+    inputs = {}
+    for limit in (200, 300, 400):
+        inputs[limit] = directory / str(limit)
+        inputs[limit].mkdir()
+        episodes, fields = deepcopy(data["algorithm_comparison_episodes.csv"])
+        runs, run_fields = deepcopy(data["algorithm_comparison_summary.csv"])
+        for row in episodes:
+            if (row["algorithm"], row["run"], row["episode"]) == ("q_learning", 2, 2):
+                row.update(success=False, final_distance=3)
+            if not row["success"]:
+                row["steps"] = limit
+        for row in runs:
+            row.update(calculate_metrics([e for e in episodes if (e["run"], e["algorithm"]) == (row["run"], row["algorithm"])]))
+        write_csv(inputs[limit] / steps.FILES[0], episodes, fields)
+        write_csv(inputs[limit] / steps.FILES[1], runs, run_fields)
+    rows, warnings = steps.build_step_summary(inputs, 2, 5, 3)
+    q = [r for r in rows if r["algorithm"] == "q_learning"]
+    assert [r["success_rate_mean_percent"] for r in q] == pytest.approx([50] * 3)
+    sd = 100 / 3 / math.sqrt(2)
+    assert [r["success_rate_sd_percentage_points"] for r in q] == pytest.approx([sd] * 3)
+    assert warnings  # CSV에 없는 환경 조건은 검증됐다고 주장하지 않는다.
+    with pytest.raises(ValueError, match="Run 수"):
+        steps.build_step_summary(inputs, 100, 5, 3)
+    axes = []
+    real = plt.subplots
+
+    def capture(*args, **kwargs):
+        fig, ax = real(*args, **kwargs)
+        axes.append(ax)
+        return fig, ax
+
+    monkeypatch.setattr(plt, "subplots", capture)
+    result = steps.generate_step_graph(inputs, directory / "out", "test", 2, 5, 3)
+    assert axes[0].containers[0].lines[2][0].get_segments()[0][:, 1] == pytest.approx([50-sd, 50+sd])
+    assert (result["output_dir"] / "step_success_rate.pdf").exists()
+    assert result["manifest"].exists()
