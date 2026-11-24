@@ -1,0 +1,2 @@
+eval_episodes,success_count,failure_count,success_rate,average_steps,average_steps_on_success,seed,eval_seed,train_episodes,max_steps,reward_up,reward_keep,reward_down,move_cost,terminal_reward
+2,1,1,0.5,86.5,73.0,42,43,2,100,1.0,0.0,-1.0,0.1,10.0
