@@ -58,7 +58,7 @@ def dataset(tmp_path):
 
 @pytest.mark.parametrize("field,value,error", [
     ("radiotap.channel.freq", "2452", "FCS, frequency"),
-    ("wlan.ds.current_channel", "8", "FCS, frequency"),
+    ("wlan.ds.current_channel", "8", "Conflicting Beacon channel"),
     ("capture_start", "2026-01-03T00:00:00+00:00", "Packet context"),
     ("radiotap.dbm_antsignal", "nan", "FCS, frequency"),
 ])
@@ -68,6 +68,15 @@ def test_invalid_source_packets(dataset, field, value, error):
     rows[0][field] = value
     preparation.write_csv(path, collect.PACKET_COLUMNS, rows)
     with pytest.raises(ValueError, match=error):
+        preparation.prepare(preparation.CaptureDirectory(dataset), "last", channel=6)
+
+
+def test_unused_conflicting_beacon_invalidates_entire_sample(dataset):
+    path = dataset / "ch6/scenario1/d1/packets.csv"
+    rows = analysis.load_csv(path)
+    rows.append({**rows[0], **beacon(channel=9, number=11), "used_for_stats": "0"})
+    preparation.write_csv(path, collect.PACKET_COLUMNS, rows)
+    with pytest.raises(ValueError, match="Conflicting Beacon channel"):
         preparation.prepare(preparation.CaptureDirectory(dataset), "last", channel=6)
 
 

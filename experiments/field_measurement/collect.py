@@ -13,7 +13,7 @@ import subprocess
 import sys
 import uuid
 
-from .beacons import FIELDS, advertised_channels, beacon_rssi, decode, good_fcs
+from .beacons import FIELDS, decode, sample_values
 from .setup.radio import Radio, frequency, require_linux_root
 
 DISTANCES = (1, 2, 3, 5, 10, 15)
@@ -54,12 +54,6 @@ def capture(radio, channel, bssid, path, duration):
         if result:
             raise subprocess.CalledProcessError(result, command)
     return decode(path, bssid)
-
-
-def sample_values(rows, bssid, channel):
-    if any(good_fcs(row, bssid) and advertised_channels(row) - {str(channel)} for row in rows):
-        return None
-    return [beacon_rssi(row, bssid, channel) for row in rows]
 
 
 def discover(radio, args, probe_dir, hint):

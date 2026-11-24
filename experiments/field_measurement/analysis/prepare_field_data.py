@@ -19,7 +19,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     __package__ = "experiments.field_measurement.analysis"
 
-from ..beacons import beacon_rssi, decode
+from ..beacons import decode, sample_values
 from ..collect import DIRECTIONS, DISTANCES, DURATION, MIN_PACKETS
 from ..setup.radio import frequency
 
@@ -94,8 +94,9 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
             with archive.open(path) as source, local.open("wb") as target:
                 shutil.copyfileobj(source, target)
             rows = decode(local, bssid)
-        observed = [(r["frame.number"], value) for r in rows
-                    if (value := beacon_rssi(r, bssid, channel)) is not None]
+        values = sample_values(rows, bssid, channel)
+        require(values is not None, f"Conflicting Beacon channel in PCAPNG: {path}")
+        observed = [(r["frame.number"], value) for r, value in zip(rows, values) if value is not None]
         require(observed == expected, f"Decoded PCAPNG differs from packet CSV: {path}")
 
     def verify_summary(path, rows):
@@ -138,11 +139,12 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
                 require(len({int(x["frame.number"]) for x in p}) == len(p),
                         f"Duplicate packet numbers: {folder}")
                 good = []
-                for packet in p:
+                values = sample_values(p, bssid, channel)
+                require(values is not None, f"Conflicting Beacon channel in packet CSV: {folder}")
+                for packet, value in zip(p, values):
                     require(all(packet[k] == row[k] for k in
                                 ("sample_no", "capture_start", "distance_m")),
                             f"Packet context mismatch: {folder}")
-                    value = beacon_rssi(packet, bssid, channel)
                     require(packet["used_for_stats"] == str(int(value is not None)),
                             f"Packet FCS, frequency, RSSI or Beacon channel mismatch: {folder}")
                     if value is not None:

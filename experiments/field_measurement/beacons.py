@@ -57,3 +57,10 @@ def beacon_rssi(row, bssid, channel):
     except ValueError:
         pass
     return None
+
+
+def sample_values(rows, bssid, channel):
+    """Reject an entire capture when a valid target Beacon advertises another channel."""
+    if any(good_fcs(row, bssid) and advertised_channels(row) - {str(channel)} for row in rows):
+        return None
+    return [beacon_rssi(row, bssid, channel) for row in rows]
