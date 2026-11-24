@@ -117,3 +117,16 @@ def test_log_distance_and_threshold_boundaries():
     assert max(map(abs, residuals)) == pytest.approx(0)
     motion = list(transitions(1, "approach", (10, 9, 8, 7), [-65, -63, -60, -62]))
     assert [row["predicted"] for row in motion] == ["keep", "up", "keep"]
+
+
+def test_analysis_rejects_changed_csv_before_writing_results(dataset, tmp_path, monkeypatch):
+    prepared = tmp_path / "prepared"
+    monkeypatch.setattr(sys, "argv", ["prepare", str(dataset), "--output", str(prepared), "--channel", "6"])
+    preparation.main()
+    with (prepared / "scenario2.csv").open("a", encoding="utf-8") as stream:
+        stream.write("\n")
+    output = tmp_path / "report"
+    monkeypatch.setattr(sys, "argv", ["analyze", str(prepared), "--output", str(output)])
+    with pytest.raises(ValueError, match="do not match metadata"):
+        analysis.main()
+    assert not output.exists()

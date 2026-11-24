@@ -3,7 +3,6 @@
 import argparse
 from collections import defaultdict
 import csv
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -19,7 +18,7 @@ from scipy import stats
 from src.state_reward import _cfg
 
 from .compare_simulation import compare
-from .prepare_field_data import require, write_csv
+from .prepare_field_data import file_sha256, require, write_csv
 from .trend import analyze_trends, ordered_legs
 from ..collect import DISTANCES
 
@@ -149,6 +148,10 @@ def main():
     motion = args.prepared / "scenario2.csv"
     manifest = args.prepared / "metadata.json"
     preparation = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else None
+    input_hashes = {path.name: file_sha256(path) for path in (source, motion)}
+    if preparation and "analysis_input_sha256" in preparation:
+        require(preparation["analysis_input_sha256"] == input_hashes,
+                "Prepared CSV files do not match metadata.json; regenerate them together")
     legs = list(ordered_legs(load_csv(motion)))
     args.output.mkdir(parents=True, exist_ok=True)
     groups, report = analyze_static(source, args.output, args.include_provisional)
@@ -159,8 +162,8 @@ def main():
         "simulation": compare(groups, field_accuracy, args.output, args.seed, args.draws),
         "includes_provisional_15m": args.include_provisional,
         "preparation": preparation,
-        "scenario1_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "scenario2_sha256": hashlib.sha256(motion.read_bytes()).hexdigest(),
+        "scenario1_sha256": input_hashes[source.name],
+        "scenario2_sha256": input_hashes[motion.name],
         "versions": {"python": platform.python_version(), "numpy": np.__version__,
                      "scipy": scipy.__version__, "matplotlib": matplotlib.__version__},
     })

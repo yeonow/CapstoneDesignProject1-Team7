@@ -54,6 +54,14 @@ def write_csv(path, fields, rows):
         writer.writerows(rows)
 
 
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -249,11 +257,7 @@ def main():
         with zipfile.ZipFile(args.archive) as archive:
             scenario1, scenario2, audit = prepare(archive, args.fifteen_meter_run,
                                                   args.channel, args.verify_captures)
-        with args.archive.open("rb") as raw:
-            digest = hashlib.sha256()
-            for block in iter(lambda: raw.read(1024 * 1024), b""):
-                digest.update(block)
-        source_sha256 = digest.hexdigest()
+        source_sha256 = file_sha256(args.archive)
     args.output.mkdir(parents=True, exist_ok=True)
     write_csv(args.output / "scenario1_provisional.csv",
               ["distance_m", "sample_no", "rssi_dbm"], scenario1)
@@ -274,6 +278,10 @@ def main():
         "archive_sha256": source_sha256, "channel": args.channel, "duration_s": DURATION,
         "min_packets": MIN_PACKETS, "verified_pcapng": args.verify_captures,
         "provisional_15m_run": args.fifteen_meter_run, "primary_count": len(primary),
+        "analysis_input_sha256": {
+            name: file_sha256(args.output / name)
+            for name in ("scenario1_strict_provisional.csv", "scenario2.csv")
+        },
     }, indent=2), encoding="utf-8")
     print(f"Scenario 1: {len(scenario1)} planned rows, {len(strict)} status=ok; 15 m run: {args.fifteen_meter_run} (provisional)")
     print(f"Scenario 2: {len(scenario2)} qualified points")
