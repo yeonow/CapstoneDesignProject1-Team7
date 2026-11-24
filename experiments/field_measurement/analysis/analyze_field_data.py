@@ -18,6 +18,7 @@ import scipy
 from scipy import stats
 from src.state_reward import _cfg
 
+from .compare_simulation import compare
 from .prepare_field_data import require, write_csv
 from .trend import analyze_trends, ordered_legs
 from ..collect import DISTANCES
@@ -94,11 +95,15 @@ def figures(groups, fit, residuals, within, within_fit, output):
     ax.plot(grid, fit["reference_rssi_dbm"] - 10 * fit["exponent"] * np.log10(grid),
             label="Log-distance fit")
     ax.set(xlabel="Distance (m)", ylabel="5-second median RSSI (dBm)")
+    if 15 in groups:
+        ax.set_title("15 m data are provisional")
     ax.legend()
     fig.savefig(output / "distance_rssi.png", dpi=160)
     plt.close(fig)
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 4), layout="constrained")
+    if 15 in groups:
+        fig.suptitle("Includes provisional 15 m data")
     axes[0].hist(within, bins="auto", density=True, alpha=0.6, label="Within-distance")
     sigma = within_fit["sigma_db"]
     if sigma:
@@ -135,16 +140,25 @@ def main():
     parser.add_argument("prepared", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--include-provisional", action="store_true")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--draws", type=int, default=1000, help="Simulation draws per distance and route")
     args = parser.parse_args()
+    if args.draws < 2:
+        parser.error("--draws must be at least 2")
     source = args.prepared / "scenario1_strict_provisional.csv"
     motion = args.prepared / "scenario2.csv"
+    manifest = args.prepared / "metadata.json"
+    preparation = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else None
     legs = list(ordered_legs(load_csv(motion)))
     args.output.mkdir(parents=True, exist_ok=True)
-    _, report = analyze_static(source, args.output, args.include_provisional)
+    groups, report = analyze_static(source, args.output, args.include_provisional)
+    field_accuracy = analyze_trends(legs, args.output)
     report.update({
         "trend_threshold_db": _cfg("TREND_THRESHOLD"),
-        "trend_accuracy": analyze_trends(legs, args.output),
+        "trend_accuracy": field_accuracy,
+        "simulation": compare(groups, field_accuracy, args.output, args.seed, args.draws),
         "includes_provisional_15m": args.include_provisional,
+        "preparation": preparation,
         "scenario1_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "scenario2_sha256": hashlib.sha256(motion.read_bytes()).hexdigest(),
         "versions": {"python": platform.python_version(), "numpy": np.__version__,
