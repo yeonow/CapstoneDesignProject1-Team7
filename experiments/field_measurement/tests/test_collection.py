@@ -1,4 +1,4 @@
-from contextlib import nullcontext
+from contextlib import contextmanager
 import csv
 import subprocess
 import sys
@@ -123,12 +123,19 @@ def test_detached_service_has_no_ssh_terminal(tmp_path, monkeypatch):
     assert command[command.index("--output") + 1].endswith("$$private data")
 
 
-@pytest.mark.parametrize("failure", [None, "channel_change", "undervoltage"])
+@pytest.mark.parametrize("failure", [None, "channel_change", "undervoltage", "restore"])
 def test_collection_with_fake_radio(tmp_path, monkeypatch, failure):
     args = collect.arguments(options(tmp_path))
     tuned = []
     power_masks = iter((0, 0x10000 if failure == "undervoltage" else 0))
-    adapter = SimpleNamespace(monitor=nullcontext, tune=tuned.append, health=lambda *_: next(power_masks))
+    @contextmanager
+    def monitor():
+        yield
+        assert not list(tmp_path.rglob("completed.json"))
+        if failure == "restore":
+            raise RuntimeError("Adapter restoration failed")
+
+    adapter = SimpleNamespace(monitor=monitor, tune=tuned.append, health=lambda *_: next(power_masks))
     monkeypatch.setattr(collect, "Radio", lambda interface: adapter)
     monkeypatch.setattr(collect, "private_output", lambda output: output)
 
@@ -145,7 +152,8 @@ def test_collection_with_fake_radio(tmp_path, monkeypatch, failure):
 
     monkeypatch.setattr(collect, "capture", capture)
     if failure:
-        error = "from channel 6 to 9" if failure == "channel_change" else "Undervoltage occurred"
+        error = {"channel_change": "from channel 6 to 9", "undervoltage": "Undervoltage occurred",
+                 "restore": "Adapter restoration failed"}[failure]
         with pytest.raises(RuntimeError, match=error):
             collect.run(args)
         assert not list(tmp_path.rglob("completed.json"))

@@ -142,11 +142,12 @@ def run(args):
         power_after = radio.health(channel)
         if power_after & ~power_before & (1 << 16):
             raise RuntimeError("Undervoltage occurred during the run")
-        completion = folder / "completed.json"
-        temporary = completion.with_suffix(".tmp")
-        temporary.write_text(json.dumps({"power_mask_end": power_after, "completed_at": timestamp()}),
-                             encoding="utf-8")
-        temporary.replace(completion)
+    # A capture is ready for preprocessing only after the adapter is restored.
+    completion = folder / "completed.json"
+    temporary = completion.with_suffix(".tmp")
+    temporary.write_text(json.dumps({"power_mask_end": power_after, "completed_at": timestamp()}),
+                         encoding="utf-8")
+    temporary.replace(completion)
 
 
 def arguments(argv):
