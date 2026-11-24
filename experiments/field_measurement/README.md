@@ -35,7 +35,7 @@ sudo python3 -m experiments.field_measurement.collect --interface wlan1 \
 
 - `--detach`는 SSH 터미널과 독립적인 systemd 서비스로 실행한다. 출력된 서비스 이름으로 `sudo systemctl status <unit>`, `sudo journalctl -u <unit>`을 조회한다. 중단은 `sudo systemctl stop <unit>`으로 요청한다. 정상 종료나 종료 요청 시 전용 어댑터를 복원한다. 장비 분리, 강제 종료, 재부팅 뒤에는 다시 인터페이스 상태를 확인한다. [systemd-run](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html)
 - 프레임별로 FCS 검증을 통과하고 지정한 BSSID, Radiotap 주파수, Beacon 채널이 일치하는지 확인한다. 동글이 여러 안테나 값을 기록하면 기존 수집기와 동일하게 첫 번째 값을 사용한다. 5초 캡처에서 적격 Beacon 10개와 첫·끝 적격 프레임 간격 4초를 요구한다. 대표 RSSI는 적격 프레임의 중앙값이다.
-- 품질 미달이면 채널을 다시 탐색해 동일 채널에서 한 번 재시도한다. 새 채널이 검출되면 런을 중단하고 원본을 보존한다. 파일은 실제 채널별 디렉터리에 저장한다. `completed.json`이 없는 런은 실패 진단용으로 남으며 새 형식 전처리의 후보에서 제외된다.
+- 품질 미달이면 채널을 다시 탐색해 동일 채널에서 한 번 재시도한다. 새 채널이 검출되면 런을 중단하고 원본을 보존한다. 파일은 실제 채널별 디렉터리에 저장한다. 무선 어댑터 복원까지 성공하면 `completed.json`을 기록한다. 완료 표시가 없는 런은 실패 진단용으로 남으며 새 형식 전처리의 후보에서 제외된다.
 
 ## 검증 및 전처리
 
@@ -50,7 +50,7 @@ python -m experiments.field_measurement.analysis.prepare_field_data `
   --output results/rssi-field/prepared-first
 ```
 
-Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 넣는다. 기본 검증은 원본 ZIP CRC, 런별 요약과 총괄 요약의 일치, PCAPNG 파일 존재, 패킷별 FCS·주파수·채널, 프레임 수, 중앙값, 시나리오 순번을 확인한다. `--verify-captures`는 원본 PCAPNG에서도 적격 프레임 번호와 RSSI를 다시 추출하여 CSV와 비교한다.
+Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 넣는다. 기본 검증은 원본 ZIP CRC, 런별 요약과 총괄 요약의 일치, PCAPNG 파일 존재, 패킷별 FCS·주파수·채널, 프레임 수, 중앙값, 시나리오 순번을 확인한다. 같은 캡처 안에서 정상 FCS를 가진 대상 Beacon이 다른 채널을 광고하면 캡처 전체를 제외한다. `--verify-captures`는 이 규칙을 원본 PCAPNG에도 적용하고 적격 프레임 번호와 RSSI를 CSV와 비교한다.
 
 | 출력 | 내용 |
 | --- | --- |
@@ -59,13 +59,13 @@ Windows에서 `--verify-captures`를 쓰려면 Wireshark의 TShark를 PATH에 �
 | `scenario1_strict_provisional.csv` | 15m 선택분을 포함한 적격 표본 |
 | `scenario2.csv` | 각 위치에서 시간순 첫 적격 런 |
 | `measurement_audit.csv` | 적격·부적격 시도와 15m 대체 런의 선정 이유 |
-| `metadata.json` | 입력 ZIP SHA-256, 채널, 캡처 재디코딩 여부, 15m 선택 |
+| `metadata.json` | 입력 ZIP 및 분석 입력 CSV의 SHA-256, 채널, 캡처 재디코딩 여부, 15m 선택 |
 
 `--15m-run first|last`는 15m 잠정 민감도 분석의 런을 선택한다. 기존 `field_analysis_prepared.zip`과 비교할 때는 `last`를 사용한다. 15m 재측정 위치가 확인되면 현장 기록과 원본을 함께 검토하고 분석 범위를 다시 결정한다.
 
 ## 통계 분석 및 시뮬레이션 비교
 
-분석은 Python 3.10 이상이 필요하다.
+분석은 Python 3.10 이상이 필요하다. 전처리 메타데이터에 분석 입력의 SHA-256이 있으면 두 CSV의 실제 해시가 일치하는지 먼저 확인한다. 서로 다른 전처리 실행의 파일이 섞였으면 같은 원본으로 전처리부터 다시 실행한다.
 
 ```powershell
 python -m pip install -r experiments/field_measurement/analysis/requirements.txt
