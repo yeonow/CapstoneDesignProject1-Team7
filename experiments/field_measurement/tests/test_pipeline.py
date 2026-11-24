@@ -126,6 +126,19 @@ def test_primary_analysis_can_run_before_15m_is_available(dataset, tmp_path, mon
         preparation.prepare(preparation.CaptureDirectory(dataset), "first", channel=6)
 
 
+def test_movement_requires_chronological_capture_order(dataset):
+    run = dataset / "ch6/trend/repeat_1/away/01/scenario1/run"
+    for filename, columns in (("summary.csv", collect.SUMMARY_COLUMNS),
+                              ("packets.csv", collect.PACKET_COLUMNS)):
+        path = run / filename
+        rows = analysis.load_csv(path)
+        for row in rows:
+            row["capture_start"] = "2026-01-02T00:00:01+00:00"
+        preparation.write_csv(path, columns, rows)
+    with pytest.raises(ValueError, match="capture timestamps are out of order"):
+        preparation.prepare(preparation.CaptureDirectory(dataset), "first", channel=6)
+
+
 def test_pipeline_with_directory_and_zip(dataset, tmp_path, monkeypatch):
     raw_zip = tmp_path / "raw.zip"
     with zipfile.ZipFile(raw_zip, "w") as archive:

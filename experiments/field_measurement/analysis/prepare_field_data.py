@@ -239,6 +239,7 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
                     scenario1.append(a)
 
     scenario2 = []
+    previous_start = None
     for repeat in (1, 2):
         for direction, distances in DIRECTIONS.items():
             for order, distance in enumerate(distances, 1):
@@ -252,6 +253,10 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
                             key=lambda r: (capture_time(r), r["run_id"]))
                 require(len(ok) >= 1, f"No qualified RSSI at {path}; review before analysis")
                 chosen = ok[0]
+                started = capture_time(chosen)
+                require(previous_start is None or previous_start <= started,
+                        f"Scenario 2 capture timestamps are out of order at {path}")
+                previous_start = started
                 for row in rows:
                     selected = row is chosen
                     a = audit_row(row, 2, path, selected,
