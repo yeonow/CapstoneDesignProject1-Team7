@@ -1,0 +1,97 @@
+dataset,noise_std,run,train_seed,eval_seed,metric,unit,q_value,random_value,difference
+algorithm,,1,42,43,success_rate,percentage points,100.0,6.0,94.0
+algorithm,,1,42,43,average_steps,steps,18.83,98.48,-79.65
+algorithm,,1,42,43,average_steps_on_success,steps,18.83,74.66666666666667,-55.83666666666667
+algorithm,,1,42,43,average_final_distance,grid units,0.0,7.131454404674936,-7.131454404674936
+algorithm,,1,42,43,success_count,episodes,100,6,94
+algorithm,,1,42,43,failure_count,episodes,0,94,-94
+noise,0.0,1,42,43,success_rate,percentage points,100.0,6.0,94.0
+noise,0.0,1,42,43,average_steps,steps,19.0,98.48,-79.48
+noise,0.0,1,42,43,average_steps_on_success,steps,19.0,74.66666666666667,-55.66666666666667
+noise,0.0,1,42,43,average_final_distance,grid units,0.0,7.131454404674936,-7.131454404674936
+noise,0.0,1,42,43,success_count,episodes,100,6,94
+noise,0.0,1,42,43,failure_count,episodes,0,94,-94
+noise,0.0,2,125,126,success_rate,percentage points,100.0,5.0,95.0
+noise,0.0,2,125,126,average_steps,steps,18.0,98.59,-80.59
+noise,0.0,2,125,126,average_steps_on_success,steps,18.0,71.8,-53.8
+noise,0.0,2,125,126,average_final_distance,grid units,0.0,7.115109500709739,-7.115109500709739
+noise,0.0,2,125,126,success_count,episodes,100,5,95
+noise,0.0,2,125,126,failure_count,episodes,0,95,-95
+noise,0.0,3,2030,2031,success_rate,percentage points,100.0,3.0,97.0
+noise,0.0,3,2030,2031,average_steps,steps,18.0,99.28,-81.28
+noise,0.0,3,2030,2031,average_steps_on_success,steps,18.0,76.0,-58.0
+noise,0.0,3,2030,2031,average_final_distance,grid units,0.0,7.343301448525291,-7.343301448525291
+noise,0.0,3,2030,2031,success_count,episodes,100,3,97
+noise,0.0,3,2030,2031,failure_count,episodes,0,97,-97
+noise,0.0,4,7783,7784,success_rate,percentage points,100.0,7.000000000000001,93.0
+noise,0.0,4,7783,7784,average_steps,steps,18.0,98.8,-80.8
+noise,0.0,4,7783,7784,average_steps_on_success,steps,18.0,82.85714285714286,-64.85714285714286
+noise,0.0,4,7783,7784,average_final_distance,grid units,0.0,7.0286348084346635,-7.0286348084346635
+noise,0.0,4,7783,7784,success_count,episodes,100,7,93
+noise,0.0,4,7783,7784,failure_count,episodes,0,93,-93
+noise,0.0,5,10008,10009,success_rate,percentage points,100.0,8.0,92.0
+noise,0.0,5,10008,10009,average_steps,steps,18.0,97.61,-79.61
+noise,0.0,5,10008,10009,average_steps_on_success,steps,18.0,70.125,-52.125
+noise,0.0,5,10008,10009,average_final_distance,grid units,0.0,7.247776173917998,-7.247776173917998
+noise,0.0,5,10008,10009,success_count,episodes,100,8,92
+noise,0.0,5,10008,10009,failure_count,episodes,0,92,-92
+noise,5.0,1,42,43,success_rate,percentage points,100.0,6.0,94.0
+noise,5.0,1,42,43,average_steps,steps,20.84,98.48,-77.64
+noise,5.0,1,42,43,average_steps_on_success,steps,20.84,74.66666666666667,-53.82666666666667
+noise,5.0,1,42,43,average_final_distance,grid units,0.0,7.131454404674936,-7.131454404674936
+noise,5.0,1,42,43,success_count,episodes,100,6,94
+noise,5.0,1,42,43,failure_count,episodes,0,94,-94
+noise,5.0,2,125,126,success_rate,percentage points,100.0,5.0,95.0
+noise,5.0,2,125,126,average_steps,steps,20.85,98.59,-77.74000000000001
+noise,5.0,2,125,126,average_steps_on_success,steps,20.85,71.8,-50.949999999999996
+noise,5.0,2,125,126,average_final_distance,grid units,0.0,7.115109500709739,-7.115109500709739
+noise,5.0,2,125,126,success_count,episodes,100,5,95
+noise,5.0,2,125,126,failure_count,episodes,0,95,-95
+noise,5.0,3,2030,2031,success_rate,percentage points,100.0,3.0,97.0
+noise,5.0,3,2030,2031,average_steps,steps,21.04,99.28,-78.24000000000001
+noise,5.0,3,2030,2031,average_steps_on_success,steps,21.04,76.0,-54.96
+noise,5.0,3,2030,2031,average_final_distance,grid units,0.0,7.343301448525291,-7.343301448525291
+noise,5.0,3,2030,2031,success_count,episodes,100,3,97
+noise,5.0,3,2030,2031,failure_count,episodes,0,97,-97
+noise,5.0,4,7783,7784,success_rate,percentage points,100.0,7.000000000000001,93.0
+noise,5.0,4,7783,7784,average_steps,steps,24.22,98.8,-74.58
+noise,5.0,4,7783,7784,average_steps_on_success,steps,24.22,82.85714285714286,-58.63714285714286
+noise,5.0,4,7783,7784,average_final_distance,grid units,0.0,7.0286348084346635,-7.0286348084346635
+noise,5.0,4,7783,7784,success_count,episodes,100,7,93
+noise,5.0,4,7783,7784,failure_count,episodes,0,93,-93
+noise,5.0,5,10008,10009,success_rate,percentage points,100.0,8.0,92.0
+noise,5.0,5,10008,10009,average_steps,steps,29.95,97.61,-67.66
+noise,5.0,5,10008,10009,average_steps_on_success,steps,29.95,70.125,-40.175
+noise,5.0,5,10008,10009,average_final_distance,grid units,0.0,7.247776173917998,-7.247776173917998
+noise,5.0,5,10008,10009,success_count,episodes,100,8,92
+noise,5.0,5,10008,10009,failure_count,episodes,0,92,-92
+noise,10.0,1,42,43,success_rate,percentage points,100.0,6.0,94.0
+noise,10.0,1,42,43,average_steps,steps,23.32,98.48,-75.16
+noise,10.0,1,42,43,average_steps_on_success,steps,23.32,74.66666666666667,-51.34666666666667
+noise,10.0,1,42,43,average_final_distance,grid units,0.0,7.131454404674936,-7.131454404674936
+noise,10.0,1,42,43,success_count,episodes,100,6,94
+noise,10.0,1,42,43,failure_count,episodes,0,94,-94
+noise,10.0,2,125,126,success_rate,percentage points,100.0,5.0,95.0
+noise,10.0,2,125,126,average_steps,steps,19.69,98.59,-78.9
+noise,10.0,2,125,126,average_steps_on_success,steps,19.69,71.8,-52.11
+noise,10.0,2,125,126,average_final_distance,grid units,0.0,7.115109500709739,-7.115109500709739
+noise,10.0,2,125,126,success_count,episodes,100,5,95
+noise,10.0,2,125,126,failure_count,episodes,0,95,-95
+noise,10.0,3,2030,2031,success_rate,percentage points,100.0,3.0,97.0
+noise,10.0,3,2030,2031,average_steps,steps,20.61,99.28,-78.67
+noise,10.0,3,2030,2031,average_steps_on_success,steps,20.61,76.0,-55.39
+noise,10.0,3,2030,2031,average_final_distance,grid units,0.0,7.343301448525291,-7.343301448525291
+noise,10.0,3,2030,2031,success_count,episodes,100,3,97
+noise,10.0,3,2030,2031,failure_count,episodes,0,97,-97
+noise,10.0,4,7783,7784,success_rate,percentage points,100.0,7.000000000000001,93.0
+noise,10.0,4,7783,7784,average_steps,steps,19.77,98.8,-79.03
+noise,10.0,4,7783,7784,average_steps_on_success,steps,19.77,82.85714285714286,-63.087142857142865
+noise,10.0,4,7783,7784,average_final_distance,grid units,0.0,7.0286348084346635,-7.0286348084346635
+noise,10.0,4,7783,7784,success_count,episodes,100,7,93
+noise,10.0,4,7783,7784,failure_count,episodes,0,93,-93
+noise,10.0,5,10008,10009,success_rate,percentage points,100.0,8.0,92.0
+noise,10.0,5,10008,10009,average_steps,steps,20.17,97.61,-77.44
+noise,10.0,5,10008,10009,average_steps_on_success,steps,20.17,70.125,-49.955
+noise,10.0,5,10008,10009,average_final_distance,grid units,0.0,7.247776173917998,-7.247776173917998
+noise,10.0,5,10008,10009,success_count,episodes,100,8,92
+noise,10.0,5,10008,10009,failure_count,episodes,0,92,-92

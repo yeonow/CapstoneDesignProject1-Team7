@@ -1,0 +1,25 @@
+dataset,noise_std,metric,unit,direction,q_success_count,random_success_count,mean,std,ci95_low,ci95_high,valid_run_count
+algorithm,,success_rate,percentage points,Q-Learning - Random,100,6,94.0,,,,1
+algorithm,,average_steps,steps,Q-Learning - Random,100,6,-79.65,,,,1
+algorithm,,average_steps_on_success,steps,Q-Learning - Random,100,6,-55.83666666666667,,,,1
+algorithm,,average_final_distance,grid units,Q-Learning - Random,100,6,-7.131454404674936,,,,1
+algorithm,,success_count,episodes,Q-Learning - Random,100,6,94.0,,,,1
+algorithm,,failure_count,episodes,Q-Learning - Random,100,6,-94.0,,,,1
+noise,0.0,success_rate,percentage points,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,0.0,average_steps,steps,Q-Learning - Random,500,29,-80.352,0.7793394639051706,-81.31967775471047,-79.38432224528954,5
+noise,0.0,average_steps_on_success,steps,Q-Learning - Random,500,29,-56.889761904761905,4.961283464667189,-63.05000896772276,-50.72951484180105,5
+noise,0.0,average_final_distance,grid units,Q-Learning - Random,500,29,-7.173255267252526,0.12299632990811353,-7.325975382010623,-7.020535152494429,5
+noise,0.0,success_count,episodes,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,0.0,failure_count,episodes,Q-Learning - Random,500,29,-94.2,1.9235384061671346,-96.58838838809997,-91.81161161190003,5
+noise,5.0,success_rate,percentage points,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,5.0,average_steps,steps,Q-Learning - Random,500,29,-75.172,4.44068913570856,-80.68584382702389,-69.6581561729761,5
+noise,5.0,average_steps_on_success,steps,Q-Learning - Random,500,29,-51.7097619047619,7.011809870810755,-60.41607378359736,-43.00345002592643,5
+noise,5.0,average_final_distance,grid units,Q-Learning - Random,500,29,-7.173255267252526,0.12299632990811353,-7.325975382010623,-7.020535152494429,5
+noise,5.0,success_count,episodes,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,5.0,failure_count,episodes,Q-Learning - Random,500,29,-94.2,1.9235384061671346,-96.58838838809997,-91.81161161190003,5
+noise,10.0,success_rate,percentage points,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,10.0,average_steps,steps,Q-Learning - Random,500,29,-77.84,1.6256537146637378,-79.85851569104418,-75.82148430895583,5
+noise,10.0,average_steps_on_success,steps,Q-Learning - Random,500,29,-54.377761904761904,5.26234376966323,-60.91182470972459,-47.84369909979922,5
+noise,10.0,average_final_distance,grid units,Q-Learning - Random,500,29,-7.173255267252526,0.12299632990811353,-7.325975382010623,-7.020535152494429,5
+noise,10.0,success_count,episodes,Q-Learning - Random,500,29,94.2,1.9235384061671346,91.81161161190003,96.58838838809997,5
+noise,10.0,failure_count,episodes,Q-Learning - Random,500,29,-94.2,1.9235384061671346,-96.58838838809997,-91.81161161190003,5
