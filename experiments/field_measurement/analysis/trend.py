@@ -75,7 +75,8 @@ def analyze_trends(legs, output):
     fig, (path_ax, matrix_ax) = plt.subplots(1, 2, figsize=(10, 4.5), layout="constrained")
     for repeat, direction, values in legs:
         path_ax.plot(range(1, 7), values, marker="o", label=f"{repeat} {direction}")
-    path_ax.set(xlabel="Measurement order within leg", ylabel="5-second median RSSI (dBm)")
+    path_ax.set(xticks=range(1, 7), xlabel="Measurement order within leg",
+                ylabel="5-second median RSSI (dBm)")
     path_ax.legend()
     labels = list(LABELS.values())
     matrix = np.array([[row[label] for label in labels] for row in aggregate[:-1]])

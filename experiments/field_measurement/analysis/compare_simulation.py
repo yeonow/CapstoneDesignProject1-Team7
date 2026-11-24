@@ -58,7 +58,7 @@ def compare(groups, field_accuracy, output, seed, draws):
     ax.fill_between(list(groups), [r["simulated_p025_dbm"] for r in comparison],
                     [r["simulated_p975_dbm"] for r in comparison], alpha=0.2,
                     label="Simulation central 95%")
-    ax.set(xlabel="Distance (m)", ylabel="RSSI (dBm)")
+    ax.set(xticks=list(groups), xlabel="Distance (m)", ylabel="RSSI (dBm)")
     ax.legend()
     if 15 in groups:
         ax.set_title("15 m data are provisional")
