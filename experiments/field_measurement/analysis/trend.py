@@ -77,7 +77,7 @@ def analyze_trends(legs, output):
         path_ax.plot(range(1, 7), values, marker="o", label=f"{repeat} {direction}")
     path_ax.set(xticks=range(1, 7), xlabel="Measurement order within leg",
                 ylabel="5-second median RSSI (dBm)")
-    path_ax.legend()
+    path_ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=2)
     labels = list(LABELS.values())
     matrix = np.array([[row[label] for label in labels] for row in aggregate[:-1]])
     matrix_ax.imshow(matrix, cmap="Blues", vmin=0)
