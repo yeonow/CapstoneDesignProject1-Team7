@@ -35,7 +35,9 @@ def source_run(folder, run, distance, count, intercept, day):
         })
     preparation.write_csv(directory / "packets.csv", collect.PACKET_COLUMNS, packets)
     preparation.write_csv(directory / "summary.csv", collect.SUMMARY_COLUMNS, summary)
-    (directory / "completed.json").write_text("{}", encoding="utf-8")
+    (directory / "completed.json").write_text(json.dumps({
+        "completed_at": f"2026-01-{day:02d}T00:01:00+00:00", "power_mask_end": 0,
+    }), encoding="utf-8")
     return directory
 
 
@@ -77,6 +79,31 @@ def test_unused_conflicting_beacon_invalidates_entire_sample(dataset):
     rows.append({**rows[0], **beacon(channel=9, number=11), "used_for_stats": "0"})
     preparation.write_csv(path, collect.PACKET_COLUMNS, rows)
     with pytest.raises(ValueError, match="Conflicting Beacon channel"):
+        preparation.prepare(preparation.CaptureDirectory(dataset), "last", channel=6)
+
+
+@pytest.mark.parametrize("change,message", [
+    ("empty_summary", "missing or mismatched run IDs"),
+    ("wrong_run", "missing or mismatched run IDs"),
+    ("early_completion", "Completion predates capture"),
+    ("stale_aggregate", "Aggregate summary disagrees"),
+])
+def test_completed_run_provenance(dataset, change, message):
+    scenario = dataset / "ch6/scenario1"
+    summary = scenario / "d1/summary.csv"
+    rows = analysis.load_csv(summary)
+    if change == "empty_summary":
+        preparation.write_csv(summary, collect.SUMMARY_COLUMNS, [])
+    elif change == "wrong_run":
+        rows[0]["run_id"] = "different"
+        preparation.write_csv(summary, collect.SUMMARY_COLUMNS, rows)
+    elif change == "early_completion":
+        summary.with_name("completed.json").write_text(json.dumps({
+            "completed_at": "2026-01-01T00:00:00+00:00", "power_mask_end": 0,
+        }), encoding="utf-8")
+    else:
+        preparation.write_csv(scenario / "summary_all.csv", collect.SUMMARY_COLUMNS, rows)
+    with pytest.raises(ValueError, match=message):
         preparation.prepare(preparation.CaptureDirectory(dataset), "last", channel=6)
 
 

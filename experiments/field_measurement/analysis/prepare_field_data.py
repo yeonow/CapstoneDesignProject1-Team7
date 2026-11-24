@@ -81,20 +81,48 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
     validated = set()
     bssids = set()
 
-    def capture_time(row):
-        stamp = datetime.fromisoformat(row["capture_start"].replace("Z", "+00:00"))
-        require(stamp.utcoffset() is not None, "Capture time needs a UTC offset")
+    def parse_time(text):
+        stamp = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        require(stamp.utcoffset() is not None, "Capture timestamps need a UTC offset")
         return stamp
 
+    def capture_time(row):
+        return parse_time(row["capture_start"])
+
     def summaries(path):
-        if path in names:
-            return read_csv(archive, path)
         base = path.removesuffix("summary_all.csv")
         completed = sorted(n for n in names if n.startswith(base)
                            and n[len(base):].count("/") == 1 and n.endswith("/completed.json"))
-        require(completed, f"No completed capture at {base}")
-        return [row for n in completed
-                for row in read_csv(archive, n.removesuffix("completed.json") + "summary.csv")]
+        completed_rows = {}
+        for marker in completed:
+            run = PurePosixPath(marker).parent.name
+            with archive.open(marker) as raw:
+                completion = json.load(raw)
+            require(isinstance(completion, dict)
+                    and isinstance(completion.get("completed_at"), str)
+                    and type(completion.get("power_mask_end")) is int,
+                    f"Invalid completion marker: {marker}")
+            power = completion["power_mask_end"]
+            require(0 <= power <= 0xFFFFFFFF and not power & 1,
+                    f"Invalid completion power state: {marker}")
+            rows = read_csv(archive, marker.removesuffix("completed.json") + "summary.csv")
+            require(rows and all(row["run_id"] == run for row in rows),
+                    f"Completed run summary has missing or mismatched run IDs: {marker}")
+            finished = parse_time(completion["completed_at"])
+            require(all(capture_time(row) <= finished for row in rows),
+                    f"Completion predates capture: {marker}")
+            completed_rows[run] = rows
+        if path in names:
+            aggregate = read_csv(archive, path)
+            if completed_rows:
+                grouped = defaultdict(list)
+                for row in aggregate:
+                    grouped[row["run_id"]].append(row)
+                require(dict(grouped) == completed_rows,
+                        f"Aggregate summary disagrees with completed runs: {path}")
+            return aggregate
+        require(completed_rows, f"No completed capture at {base}")
+        return [row for rows in completed_rows.values() for row in rows]
 
     def verify_capture(path, bssid, expected):
         with tempfile.TemporaryDirectory(prefix="field-rssi-") as directory:
