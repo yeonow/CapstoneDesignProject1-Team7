@@ -330,3 +330,37 @@ def test_legacy_csv_explicitly_reports_unverified_targets(fixed_csvs):
     status = analysis.validate_dataset(directory)
     assert status["valid"]
     assert any("Target" in message and "검증하지 못" in message for message in status["warnings"])
+
+
+def test_episode_to_paper_statistics_keep_success_population_and_equal_run_weight(fixed_csvs):
+    """가상 원시 Episode로 성공률·조건부 Step·Run SD를 독립적으로 재계산한다."""
+    directory, data = fixed_csvs
+    episodes, fields = data["algorithm_comparison_episodes.csv"]
+    runs, run_fields = data["algorithm_comparison_summary.csv"]
+    for row in episodes:
+        success = row["algorithm"] == "q_learning" and (row["run"] == 2 or row["episode"] == 1)
+        row.update(success=success, final_distance=0.0 if success else 3.0,
+                   steps=(2 if row["run"] == 1 else 2 + 2 * row["episode"]) if success else 10)
+    for row in runs:
+        subset = [ep for ep in episodes if (ep["run"], ep["algorithm"]) == (row["run"], row["algorithm"])]
+        row.update(calculate_metrics(subset))
+    write_csv(directory / "algorithm_comparison_episodes.csv", episodes, fields)
+    write_csv(directory / "algorithm_comparison_summary.csv", runs, run_fields)
+    status = analysis.validate_dataset(directory)
+    assert status["valid"]
+    tables = {row["algorithm"]: row for row in analysis.summarize_runs(status["runs"])}
+    q, random_row = tables["q_learning"], tables["random"]
+    assert q["success_rate_percent_mean"] == pytest.approx(200 / 3)
+    assert q["success_rate_percent_std"] == pytest.approx((200 / 3) / math.sqrt(2))
+    assert q["average_steps_on_success_mean"] == 4  # Run 평균(2,6); 성공 Episode를 합친 평균은 5
+    assert q["average_steps_on_success_std"] == pytest.approx(math.sqrt(8))
+    assert q["average_steps_mean"] == pytest.approx(20 / 3)
+    assert q["success_count_total"] == 4 and q["failure_count_total"] == 2
+    assert random_row["success_rate_percent_mean"] == 0
+    assert random_row["average_steps_mean"] == 10
+    assert random_row["average_steps_on_success_mean"] is None
+    assert random_row["average_steps_on_success_valid_run_count"] == 0
+    stats, pairs = analysis.paired_comparisons(status["runs"], "algorithm")
+    assert not any(p["metric"] == "average_steps_on_success" for p in pairs)
+    assert next(s for s in stats if s["metric"] == "success_rate")["valid_run_count"] == 2
+    assert analysis.summarize_runs(list(reversed(status["runs"]))) == list(tables.values())
