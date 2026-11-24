@@ -1,0 +1,39 @@
+{
+  "train_target_count": 187,
+  "eval_target_count": 188,
+  "purpose": "presentation",
+  "grid_size": 20,
+  "start_position": [
+    0,
+    0
+  ],
+  "target_position": [
+    17,
+    18
+  ],
+  "target_mode": "split",
+  "target_min_distance": 5,
+  "target_distance_metric": "chebyshev",
+  "actions": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "noise_std": 2.0,
+  "max_steps": 400,
+  "shortest_path_steps": 18,
+  "seed": 42,
+  "runs": 2,
+  "train_episodes": 2,
+  "eval_episodes_per_run": 8,
+  "selection": "paired",
+  "selection_rule": "minimum (combined steps, run, episode) among joint successes",
+  "status": "no_joint_success",
+  "combined_steps": null,
+  "trajectories": null
+}
