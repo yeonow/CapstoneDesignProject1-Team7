@@ -1,0 +1,9 @@
+run,algorithm,episode,train_seed,eval_seed,success,steps,final_distance,target_x,target_y,shortest_path_steps
+1,q_learning,1,42,43,True,117,0.0,2,9,9
+1,q_learning,2,42,43,False,400,13.601470508735444,8,11,11
+1,q_learning,3,42,43,False,400,21.400934559032695,13,18,18
+1,q_learning,4,42,43,False,400,6.082762530298219,6,1,6
+1,random,1,42,43,True,46,0.0,2,9,9
+1,random,2,42,43,True,134,0.0,8,11,11
+1,random,3,42,43,True,151,0.0,13,18,18
+1,random,4,42,43,True,46,0.0,6,1,6

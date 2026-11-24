@@ -1,0 +1,562 @@
+{
+  "grid_size": 20,
+  "target_mode": "split",
+  "target_label": "Random Target",
+  "target_distance_metric": "manhattan",
+  "target_min_distance": 5,
+  "target_candidate_count": 385,
+  "train_target_count": 193,
+  "eval_target_count": 192,
+  "shortest_distance_metric": "chebyshev",
+  "max_steps": 400,
+  "noise_std": 2.0,
+  "noise_distribution": "Gaussian",
+  "seed": 42,
+  "runs": 1,
+  "train_episodes": 2,
+  "eval_episodes": 4,
+  "actions": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "train_seed_rule": "seed + 2*(run-1)",
+  "eval_seed_rule": "train_seed + 1",
+  "noise_seed_rule": "<eval_seed>:<episode>",
+  "evaluation_policy": "greedy Q-Learning; uniform random eight-action baseline",
+  "model_config": {
+    "ALPHA": 0.1,
+    "GAMMA": 0.9,
+    "EPSILON": 0.9,
+    "EPSILON_MIN": 0.05,
+    "EPSILON_DECAY": 0.995,
+    "REWARD_UP": 1.0,
+    "REWARD_KEEP": 0.0,
+    "REWARD_DOWN": -1.0,
+    "MOVE_COST": 0.1,
+    "TERMINAL_REWARD": 10.0,
+    "BLOCKED_APPLY_MOVE_COST": true,
+    "BLOCKED_TREND_KEEP": false,
+    "BLOCKED_PENALTY": 0.0,
+    "CELL_SIZE_M": 1.0,
+    "MIN_DISTANCE_M": 1.0,
+    "CARRIER_FREQUENCY_HZ": 2400000000.0,
+    "TX_POWER_DBM": 0.0,
+    "NOISE_FLOOR_DBM": -90.0,
+    "ETA_LOS": 2.0,
+    "ETA_NLOS": 20.0,
+    "PATH_LOSS_EXPONENT": 2.0,
+    "MULTIPATH_FADING": 1.0,
+    "CHANNEL_STATE": "los"
+  },
+  "algorithm": "q_learning",
+  "selection": "best",
+  "status": "selected",
+  "selection_rule": "success only; minimum (path_ratio, steps, run, episode)",
+  "trajectory": {
+    "run": 1,
+    "algorithm": "q_learning",
+    "train_seed": 42,
+    "eval_seed": 43,
+    "episode": 1,
+    "success": true,
+    "steps": 117,
+    "final_distance": 0.0,
+    "target_x": 2,
+    "target_y": 9,
+    "shortest_path_steps": 9,
+    "start_position": [
+      0,
+      0
+    ],
+    "target_position": [
+      2,
+      9
+    ],
+    "grid_size": 20,
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        1,
+        9
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        2,
+        11
+      ],
+      [
+        1,
+        11
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        11
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        1,
+        11
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        1,
+        11
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        9
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        11
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        11
+      ],
+      [
+        1,
+        10
+      ],
+      [
+        2,
+        10
+      ],
+      [
+        1,
+        11
+      ],
+      [
+        2,
+        11
+      ],
+      [
+        1,
+        12
+      ],
+      [
+        0,
+        11
+      ],
+      [
+        0,
+        11
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        1,
+        9
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        2,
+        7
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        2,
+        6
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        2,
+        6
+      ],
+      [
+        2,
+        7
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        2,
+        9
+      ]
+    ],
+    "path_ratio": 13.0,
+    "noise_std": 2.0,
+    "blocked_move_count": 24,
+    "target_mode": "split",
+    "noise_seed": "43:1"
+  }
+}
