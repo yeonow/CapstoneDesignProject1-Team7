@@ -1,5 +1,6 @@
 # CapstoneDesignProject1-Team7
 
+[Raspberry Pi RSSI 실측 실험 안내](experiments/field_measurement/README.md)
 ## 논문 조건: 8방향 Best Path
 
 프로젝트 루트에서 다음 명령으로 전체 실험을 재현합니다.
