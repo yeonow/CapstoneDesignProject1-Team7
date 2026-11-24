@@ -1,0 +1,32 @@
+
+# Raw packet capture files
+*.pcap
+*.pcapng
+*.pcap.gz
+*.pcapng.gz
+
+# Generated experiment data
+rssi_experiments/
+results/
+*.csv
+*.log
+metadata.json
+
+# Allow sanitized CSV test fixtures
+!tests/fixtures/**/*.csv
+
+# Local network configuration
+network-config
+user-data
+*.nmconnection
+wifi-recovery*.sh
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
