@@ -3,6 +3,8 @@
 import argparse
 from collections import defaultdict
 import csv
+import hashlib
+import io
 import json
 import math
 from pathlib import Path
@@ -18,15 +20,15 @@ from scipy import stats
 from src.state_reward import _cfg
 
 from .compare_simulation import compare
-from .prepare_field_data import file_sha256, require, write_csv
+from .prepare_field_data import require, write_csv
 from .trend import analyze_trends, ordered_legs
 from ..collect import DISTANCES
 
 
-def qualified_values(source, include_provisional):
+def qualified_values(rows, include_provisional):
     groups = defaultdict(list)
     keys = set()
-    for row in load_csv(source):
+    for row in rows:
         distance, number = int(float(row["distance_m"])), int(row["sample_no"])
         value = float(row["rssi_dbm"])
         require(distance in DISTANCES and distance == float(row["distance_m"])
@@ -41,8 +43,10 @@ def qualified_values(source, include_provisional):
     return dict(sorted(groups.items()))
 
 
-def load_csv(path):
-    with path.open(newline="", encoding="utf-8-sig") as stream:
+def load_csv(path, *, content=None):
+    if content is None:
+        content = path.read_bytes()
+    with io.StringIO(content.decode("utf-8-sig"), newline="") as stream:
         rows = list(csv.DictReader(stream))
     require(all(None not in row and None not in row.values() for row in rows),
             f"Malformed file: {path.name}")
@@ -119,15 +123,14 @@ def figures(groups, fit, residuals, within, within_fit, output):
     plt.close(fig)
 
 
-def analyze_static(source, output, include_provisional):
-    groups = qualified_values(source, include_provisional)
+def analyze_static(groups, output):
     summary = list(distance_statistics(groups))
     fit, residuals = path_loss(groups)
     within = np.concatenate([np.asarray(values) - np.mean(values) for values in groups.values()])
     within_fit = gaussian_fit(within, len(within) - len(groups))
     write_csv(output / "distance_statistics.csv", list(summary[0]), summary)
     figures(groups, fit, residuals, within, within_fit, output)
-    return groups, {
+    return {
         "path_loss": fit,
         "gaussian": {"within_distance": within_fit,
                      "path_loss_residual": gaussian_fit(residuals, len(residuals) - 2)},
@@ -148,13 +151,15 @@ def main():
     motion = args.prepared / "scenario2.csv"
     manifest = args.prepared / "metadata.json"
     preparation = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else None
-    input_hashes = {path.name: file_sha256(path) for path in (source, motion)}
+    inputs = {path: path.read_bytes() for path in (source, motion)}
+    input_hashes = {path.name: hashlib.sha256(content).hexdigest() for path, content in inputs.items()}
     if preparation and "analysis_input_sha256" in preparation:
         require(preparation["analysis_input_sha256"] == input_hashes,
                 "Prepared CSV files do not match metadata.json; regenerate them together")
-    legs = list(ordered_legs(load_csv(motion)))
+    legs = list(ordered_legs(load_csv(motion, content=inputs[motion])))
+    groups = qualified_values(load_csv(source, content=inputs[source]), args.include_provisional)
     args.output.mkdir(parents=True, exist_ok=True)
-    groups, report = analyze_static(source, args.output, args.include_provisional)
+    report = analyze_static(groups, args.output)
     field_accuracy = analyze_trends(legs, args.output)
     report.update({
         "trend_threshold_db": _cfg("TREND_THRESHOLD"),

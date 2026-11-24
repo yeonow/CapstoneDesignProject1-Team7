@@ -157,3 +157,27 @@ def test_analysis_rejects_changed_csv_before_writing_results(dataset, tmp_path, 
     with pytest.raises(ValueError, match="do not match metadata"):
         analysis.main()
     assert not output.exists()
+
+
+def test_analysis_uses_the_bytes_it_hashed(dataset, tmp_path, monkeypatch):
+    prepared = tmp_path / "prepared"
+    monkeypatch.setattr(sys, "argv", ["prepare", str(dataset), "--output", str(prepared), "--channel", "6"])
+    preparation.main()
+    source = prepared / "scenario1_strict_provisional.csv"
+    hashes = json.loads((prepared / "metadata.json").read_text(encoding="utf-8"))["analysis_input_sha256"]
+    read_bytes = type(source).read_bytes
+
+    def read_and_replace(path):
+        content = read_bytes(path)
+        if path.name == "scenario2.csv":
+            source.write_bytes(b"replacement after the initial read")
+        return content
+
+    monkeypatch.setattr(type(source), "read_bytes", read_and_replace)
+    output = tmp_path / "report"
+    monkeypatch.setattr(sys, "argv", ["analyze", str(prepared), "--output", str(output), "--draws", "20"])
+    analysis.main()
+    report = json.loads((output / "report.json").read_text(encoding="utf-8"))
+    assert report["path_loss"]["count"] == 75
+    assert report["scenario1_sha256"] == hashes[source.name]
+    assert source.read_bytes() == b"replacement after the initial read"
