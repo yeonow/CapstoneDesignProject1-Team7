@@ -280,3 +280,22 @@ def test_analysis_module_cli(fixed_csvs):
     )
     assert process.returncode == 0
     assert (directory / "cli" / "paper_analysis_summary.md").exists()
+
+
+@pytest.mark.parametrize("x,y", [("1.5", "2"), ("-1", "2"), ("NaN", "2"), ("", "2")])
+def test_optional_target_coordinates_reject_malformed_values(tmp_path, x, y):
+    path = tmp_path / "synthetic.csv"
+    path.write_text(f"algorithm,target_x,target_y\nq_learning,{x},{y}\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+
+
+def test_optional_target_columns_preserve_legacy_and_integer_coordinates(tmp_path):
+    path = tmp_path / "synthetic.csv"
+    path.write_text("algorithm,target_x,target_y\nq_learning,3,4\nrandom,,\n", encoding="utf-8")
+    rows = analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))
+    assert rows[0]["target_x"] == 3 and isinstance(rows[0]["target_x"], int)
+    assert rows[1]["target_x"] is rows[1]["target_y"] is None
+    path.write_text("algorithm,target_x\nq_learning,3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Target"):
+        analysis.read_result_csv(path, ("algorithm",), ("target_x", "target_y"))

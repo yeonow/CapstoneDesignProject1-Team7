@@ -95,7 +95,7 @@ def run_statistics(values):
     }
 
 
-def read_result_csv(path, required_fields):
+def read_result_csv(path, required_fields, optional_fields=()):
     """필수 열과 자료형을 확인한다. 결측 성공 Step 지표만 빈 값을 허용한다."""
     path = Path(path)
     with path.open(newline="", encoding="utf-8-sig") as file:
@@ -104,14 +104,17 @@ def read_result_csv(path, required_fields):
         missing = set(required_fields) - set(fields)
         if missing or len(fields) != len(set(fields)):
             raise ValueError(f"{path.name}: 필수 열 누락 또는 중복 열: {sorted(missing)}")
+        selected_fields = (*required_fields, *(key for key in optional_fields if key in fields))
+        if {"target_x", "target_y"} & set(fields) and not {"target_x", "target_y"} <= set(fields):
+            raise ValueError(f"{path.name}: Target 좌표 열은 target_x와 target_y가 함께 필요합니다.")
         result = []
         for line, raw in enumerate(reader, 2):
             if None in raw or any(value is None for value in raw.values()):
                 raise ValueError(f"{path.name}:{line}: 열 개수가 일치하지 않습니다.")
             row = {}
-            for key in required_fields:
+            for key in selected_fields:
                 value = raw[key]
-                if value == "" and key.startswith("average_steps_on_success"):
+                if value == "" and (key.startswith("average_steps_on_success") or key in optional_fields):
                     row[key] = None
                 elif key == "algorithm":
                     if value not in ("q_learning", "random"):
@@ -129,12 +132,15 @@ def read_result_csv(path, required_fields):
                         integer = key in {
                             "run", "episode", "steps", "train_seed", "eval_seed",
                             "train_episodes", "eval_episodes", "success_count", "failure_count",
+                            "target_x", "target_y", "shortest_path_steps",
                         } or key.endswith("run_count")
                         if integer and not number.is_integer():
                             raise ValueError
                         row[key] = int(number) if integer else number
                     except ValueError:
                         raise ValueError(f"{path.name}:{line}: {key} 값이 잘못되었습니다: {value!r}") from None
+            if (row.get("target_x") is None) != (row.get("target_y") is None):
+                raise ValueError(f"{path.name}:{line}: Target 좌표 한쪽만 비어 있습니다.")
             result.append(row)
     if not result:
         raise ValueError(f"{path.name}: 데이터 행이 없습니다.")
@@ -161,7 +167,8 @@ def validate_dataset(input_dir, noise=False):
     try:
         episodes = read_result_csv(input_dir / (
             "noise_comparison_episodes.csv" if noise else "algorithm_comparison_episodes.csv"
-        ), NOISE_EPISODE_FIELDS if noise else EPISODE_FIELDS)
+        ), NOISE_EPISODE_FIELDS if noise else EPISODE_FIELDS,
+            optional_fields=("target_x", "target_y", "shortest_path_steps"))
         runs = read_result_csv(input_dir / (
             "noise_comparison_runs.csv" if noise else "algorithm_comparison_summary.csv"
         ), NOISE_RUN_FIELDS if noise else SUMMARY_FIELDS)
