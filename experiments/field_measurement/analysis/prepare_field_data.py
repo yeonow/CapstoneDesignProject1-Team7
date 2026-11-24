@@ -212,9 +212,13 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
     runs = defaultdict(lambda: defaultdict(list))
     for row in rows1:
         runs[float(row["distance_m"])][row["run_id"]].append(row)
-    require(set(runs) == set(DISTANCES), "Unexpected distance set")
+    required_distances = set(DISTANCES) - {15}
+    require(required_distances <= runs.keys() <= set(DISTANCES),
+            "Scenario 1 requires every planned distance from 1 to 10 m; 15 m is optional")
     scenario1 = []
     for distance in DISTANCES:
+        if distance not in runs:
+            continue
         candidates = runs[distance]
         require(distance == 15 or len(candidates) == 1,
                 f"Unexpected run count at {distance} m; review manually")
@@ -263,7 +267,7 @@ def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
                 and n.endswith(("/summary_all.csv", "/completed.json"))),
             "Unexpected trend directories; review manually")
     require(len(bssids) == 1, "Multiple hotspot BSSIDs in the selected channel dataset")
-    require(len(scenario1) == 90 and len(scenario2) == 24, "Unexpected dataset size")
+    require(len(scenario1) == 15 * len(runs) and len(scenario2) == 24, "Unexpected dataset size")
     return scenario1, scenario2, audit
 
 
@@ -300,18 +304,21 @@ def main():
     write_csv(args.output / "scenario1_strict_provisional.csv",
               ["distance_m", "sample_no", "rssi_dbm"], strict)
     primary = [r for r in strict if float(r["distance_m"]) != 15]
+    provisional_run = (args.fifteen_meter_run
+                       if any(float(r["distance_m"]) == 15 for r in scenario1) else None)
     write_csv(args.output / "scenario1_primary.csv",
               ["distance_m", "sample_no", "rssi_dbm"], primary)
     (args.output / "metadata.json").write_text(json.dumps({
         "archive_sha256": source_sha256, "channel": args.channel, "duration_s": DURATION,
         "min_packets": MIN_PACKETS, "verified_pcapng": args.verify_captures,
-        "provisional_15m_run": args.fifteen_meter_run, "primary_count": len(primary),
+        "provisional_15m_run": provisional_run, "primary_count": len(primary),
         "analysis_input_sha256": {
             name: file_sha256(args.output / name)
             for name in ("scenario1_strict_provisional.csv", "scenario2.csv")
         },
     }, indent=2), encoding="utf-8")
-    print(f"Scenario 1: {len(scenario1)} planned rows, {len(strict)} status=ok; 15 m run: {args.fifteen_meter_run} (provisional)")
+    fifteen_meter_status = f"{provisional_run} (provisional)" if provisional_run else "unavailable"
+    print(f"Scenario 1: {len(scenario1)} prepared rows, {len(strict)} status=ok; 15 m run: {fifteen_meter_status}")
     print(f"Scenario 2: {len(scenario2)} qualified points")
     print(f"Audit: {len(audit)} attempts, {sum(int(r['valid_packet_count']) for r in audit)} valid packet rows")
     print(f"All statuses: {dict(Counter(r['status'] for r in audit))}")

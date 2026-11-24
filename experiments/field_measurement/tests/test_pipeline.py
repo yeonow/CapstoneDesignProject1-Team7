@@ -107,6 +107,25 @@ def test_completed_run_provenance(dataset, change, message):
         preparation.prepare(preparation.CaptureDirectory(dataset), "last", channel=6)
 
 
+def test_primary_analysis_can_run_before_15m_is_available(dataset, tmp_path, monkeypatch):
+    static = dataset / "ch6/scenario1"
+    for run in ("d15", "d15_later"):
+        (static / run / "completed.json").unlink()
+    prepared = tmp_path / "prepared"
+    monkeypatch.setattr(sys, "argv", ["prepare", str(dataset), "--output", str(prepared), "--channel", "6"])
+    preparation.main()
+    metadata = json.loads((prepared / "metadata.json").read_text(encoding="utf-8"))
+    assert metadata["provisional_15m_run"] is None
+    source = analysis.load_csv(prepared / "scenario1_strict_provisional.csv")
+    assert len(source) == 75
+    assert list(analysis.qualified_values(source, False)) == list(collect.DISTANCES[:-1])
+    with pytest.raises(ValueError, match="No qualified provisional 15 m samples"):
+        analysis.qualified_values(source, True)
+    (static / "d10" / "completed.json").unlink()
+    with pytest.raises(ValueError, match="every planned distance"):
+        preparation.prepare(preparation.CaptureDirectory(dataset), "first", channel=6)
+
+
 def test_pipeline_with_directory_and_zip(dataset, tmp_path, monkeypatch):
     raw_zip = tmp_path / "raw.zip"
     with zipfile.ZipFile(raw_zip, "w") as archive:

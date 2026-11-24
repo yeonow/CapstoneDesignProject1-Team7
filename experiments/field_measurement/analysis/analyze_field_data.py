@@ -39,6 +39,7 @@ def qualified_values(rows, include_provisional):
         if include_provisional or distance != 15:
             groups[distance].append(value)
     distances = DISTANCES if include_provisional else DISTANCES[:-1]
+    require(not include_provisional or 15 in groups, "No qualified provisional 15 m samples are available")
     require(set(groups) == set(distances), "Scenario 1 lacks qualified samples at a required distance")
     return dict(sorted(groups.items()))
 
