@@ -182,6 +182,10 @@ def validate_dataset(input_dir, noise=False):
 
     grouped, run_map = defaultdict(list), {}
     episode_keys = set()
+    has_targets = any(row.get("target_x") is not None for row in episodes)
+    paired_targets, targets_by_episode = {}, {}
+    if not has_targets:
+        status["warnings"].append("Target 좌표가 없어 알고리즘/Noise 간 Target 대응은 검증하지 못했습니다.")
     for row in episodes:
         key = (*group_key(row), row["episode"])
         require(key not in episode_keys, f"중복 Episode: {key}")
@@ -189,6 +193,17 @@ def validate_dataset(input_dir, noise=False):
         grouped[group_key(row)].append(row)
         require(row["run"] >= 1 and row["episode"] >= 1, f"Run/Episode 번호 오류: {key}")
         require(row["success"] == (row["final_distance"] == 0), f"성공 여부와 최종 거리 불일치: {key}")
+        if has_targets:
+            target = row.get("target_x"), row.get("target_y")
+            require(None not in target, f"Target 좌표 누락: {key}")
+            pair = row.get("noise_std"), row["run"], row["episode"]
+            require(pair not in paired_targets or paired_targets[pair] == target,
+                    f"알고리즘 간 Target 불일치: {pair}")
+            paired_targets[pair] = target
+            episode = row["run"], row["episode"]
+            require(episode not in targets_by_episode or targets_by_episode[episode] == target,
+                    f"Noise 수준 간 Target 불일치: {episode}")
+            targets_by_episode[episode] = target
     for row in runs:
         key = group_key(row)
         require(key not in run_map, f"중복 Run: {key}")
