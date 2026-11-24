@@ -135,6 +135,14 @@ def run(args):
                                 if value is not None]
                     if covers_sample_window(accepted):
                         break
+                    if signals is None:
+                        reason = "conflicting channels advertised by target Beacons"
+                    elif len(accepted) < MIN_PACKETS:
+                        reason = f"{len(accepted)} valid Beacons (minimum {MIN_PACKETS})"
+                    else:
+                        reason = "invalid timestamps or insufficient time coverage"
+                    print(f"Rejected sample {index}/{args.count}, attempt {attempt}/2: {reason}",
+                          file=sys.stderr, flush=True)
                     detected = discover(radio, args, probe_dir, channel)
                     if detected != channel:
                         raise RuntimeError(f"Hotspot moved from channel {channel} to {detected}. "

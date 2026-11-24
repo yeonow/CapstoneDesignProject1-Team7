@@ -172,8 +172,8 @@ def test_detached_service_has_no_ssh_terminal(tmp_path, monkeypatch):
     assert command[command.index("--output") + 1].endswith("$$private data")
 
 
-@pytest.mark.parametrize("failure", [None, "channel_change", "undervoltage", "restore"])
-def test_collection_with_fake_radio(tmp_path, monkeypatch, failure):
+@pytest.mark.parametrize("failure", [None, "channel_change", "undervoltage", "restore", "short_window"])
+def test_collection_with_fake_radio(tmp_path, monkeypatch, capsys, failure):
     args = collect.arguments(options(tmp_path))
     tuned = []
     power_masks = iter((0, 0x10000 if failure == "undervoltage" else 0))
@@ -194,13 +194,15 @@ def test_collection_with_fake_radio(tmp_path, monkeypatch, failure):
         # there during the five-second sample.
         if duration == 5 and failure == "channel_change":
             return [beacon(channel=9)]
+        if duration == 5 and failure == "short_window" and path.stem.endswith("_attempt_1"):
+            return [beacon(channel, index + 1, index / 10) for index in range(10)]
         actual = 9 if failure == "channel_change" and any(tmp_path.rglob("sample*.pcapng")) else 6
         if channel == actual:
             return [beacon(channel, index + 1, index / 2, -60 - index) for index in range(10)]
         return []
 
     monkeypatch.setattr(collect, "capture", capture)
-    if failure:
+    if failure and failure != "short_window":
         error = {"channel_change": "from channel 6 to 9", "undervoltage": "Undervoltage occurred",
                  "restore": "Adapter restoration failed"}[failure]
         with pytest.raises(RuntimeError, match=error):
@@ -213,4 +215,12 @@ def test_collection_with_fake_radio(tmp_path, monkeypatch, failure):
             row, = list(csv.DictReader(stream))
         assert row["frequency_mhz"] == "2437"
         assert row["rssi_dbm"] == "-64.5"
+        if failure == "short_window":
+            assert row["pcapng"].endswith("_attempt_2.pcapng")
+            assert (completed.parent / "sample_01_attempt_1.pcapng").is_file()
+    logs = capsys.readouterr().err
+    if failure == "short_window":
+        assert "attempt 1/2: invalid timestamps or insufficient time coverage" in logs
+    if failure == "channel_change":
+        assert "conflicting channels advertised by target Beacons" in logs
     assert tuned[:2] == [9, 6]
