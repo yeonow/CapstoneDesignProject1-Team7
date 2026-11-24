@@ -110,6 +110,42 @@ def test_monitor_restores_adapter_on_capture_failure(tmp_path, monkeypatch):
     ]
 
 
+@pytest.mark.parametrize("blocker,message", [
+    ("lock", "Another field capture owns this adapter"),
+    ("association", "no active connection"),
+    ("network_manager", "connection or transition"),
+])
+def test_monitor_refuses_busy_interfaces_without_changing_them(tmp_path, monkeypatch, blocker, message):
+    device = radio.Radio.__new__(radio.Radio)
+    device.interface = "wlan1"
+    calls = []
+
+    def lock(*args):
+        if blocker == "lock":
+            raise BlockingIOError
+
+    def iw(*args):
+        calls.append(("iw", *args))
+        return "Connected to target" if blocker == "association" else "Not connected."
+
+    def invoke(*args):
+        calls.append(args)
+        return "40 (connecting)"
+
+    monkeypatch.setattr(radio, "LOCK_DIR", tmp_path)
+    monkeypatch.setitem(sys.modules, "fcntl", SimpleNamespace(flock=lock, LOCK_EX=1, LOCK_NB=2))
+    monkeypatch.setattr(radio, "command", invoke)
+    monkeypatch.setattr(device, "health", lambda: 0)
+    monkeypatch.setattr(device, "state", lambda: ("managed", True, None))
+    monkeypatch.setattr(device, "iw", iw)
+    monkeypatch.setattr(device, "ip", lambda *args: calls.append(("ip", *args)))
+    with pytest.raises(RuntimeError, match=message), device.monitor():
+        pytest.fail("A busy interface was selected")
+
+    allowed = [("iw", "link"), ("nmcli", "-g", "GENERAL.STATE", "device", "show", "wlan1")]
+    assert calls == allowed[:{"lock": 0, "association": 1, "network_manager": 2}[blocker]]
+
+
 def options(tmp_path):
     return ["--interface", "wlan1", "--bssid", BSSID.upper(), "--channel", "9",
             "--scan-channels", "6", "9", "--distance", "10", "--output", str(tmp_path),
