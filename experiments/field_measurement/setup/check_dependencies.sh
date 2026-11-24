@@ -6,11 +6,9 @@
 commands=(
     python3
     tshark
-    capinfos
     iw
     ip
     nmcli
-    lsusb
     vcgencmd
 )
 
