@@ -1,26 +1,45 @@
 #!/usr/bin/env python3
-"""Prepare the two RSSI field-experiment datasets without modifying raw records.
-
-Input: the ZIP containing ch9/scenario1 and ch9/trend. Uses only Python's
-standard library. Run with --15m-run first or last to explicitly select a
-complete 15 m run. The latter remains provisional until its location is verified.
-"""
+"""Validate and prepare field experiment datasets from a private ZIP or capture directory."""
 import argparse
 import csv
+from datetime import datetime
+import hashlib
 import io
+import json
+import re
+import shutil
 import statistics
+import tempfile
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
 
-DISTANCES = (1, 2, 3, 5, 10, 15)
-DIRECTIONS = {"approach": (10, 9, 8, 7, 6, 5),
-              "away": (5, 6, 7, 8, 9, 10)}
+from ..beacons import beacon_rssi, decode
+from ..collect import DIRECTIONS, DISTANCES, DURATION, MIN_PACKETS
+from ..setup.radio import frequency
+
+
+class CaptureDirectory:
+    def __init__(self, root):
+        self.root = root
+
+    def namelist(self):
+        return [path.relative_to(self.root).as_posix() for path in self.root.rglob("*")
+                if path.is_file()]
+
+    def open(self, path):
+        return (self.root / path).open("rb")
+
+    def testzip(self):
+        return None
 
 
 def read_csv(archive, path):
     with archive.open(path) as raw:
-        return list(csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig")))
+        rows = list(csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig")))
+    require(all(None not in row and None not in row.values() for row in rows),
+            f"Malformed CSV: {path}")
+    return rows
 
 
 def write_csv(path, fields, rows):
@@ -35,15 +54,44 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def prepare(archive, fifteen_meter_run):
-    names = set(archive.namelist())
+def prepare(archive, fifteen_meter_run, channel=9, verify_captures=False):
+    members = archive.namelist()
+    names = set(members)
+    require(len(names) == len(members), "Duplicate archive paths")
     require(archive.testzip() is None, "ZIP integrity check failed")
-    # Accept both a directly zipped directory and a ZIP with an outer folder.
-    candidates = [n for n in names if n.endswith("ch9/scenario1/summary_all.csv")]
-    require(len(candidates) == 1, "Expected exactly one ch9/scenario1/summary_all.csv")
-    root = candidates[0][:-len("scenario1/summary_all.csv")]
+    pattern = re.compile(rf"(?P<root>(?:.*/)?ch{channel}/)scenario1/"
+                         r"(?:summary_all\.csv|[^/]+/completed\.json)")
+    roots = {match["root"] for n in names if (match := pattern.fullmatch(n))}
+    require(len(roots) == 1, f"Expected one scenario 1 dataset at channel {channel}")
+    root, = roots
     audit = []
     validated = set()
+    bssids = set()
+
+    def capture_time(row):
+        stamp = datetime.fromisoformat(row["capture_start"].replace("Z", "+00:00"))
+        require(stamp.utcoffset() is not None, "Capture time needs a UTC offset")
+        return stamp
+
+    def summaries(path):
+        if path in names:
+            return read_csv(archive, path)
+        base = path.removesuffix("summary_all.csv")
+        completed = sorted(n for n in names if n.startswith(base)
+                           and n[len(base):].count("/") == 1 and n.endswith("/completed.json"))
+        require(completed, f"No completed capture at {base}")
+        return [row for n in completed
+                for row in read_csv(archive, n.removesuffix("completed.json") + "summary.csv")]
+
+    def verify_capture(path, bssid, expected):
+        with tempfile.TemporaryDirectory(prefix="field-rssi-") as directory:
+            local = Path(directory) / "sample.pcapng"
+            with archive.open(path) as source, local.open("wb") as target:
+                shutil.copyfileobj(source, target)
+            rows = decode(local, bssid)
+        observed = [(r["frame.number"], value) for r in rows
+                    if (value := beacon_rssi(r, bssid, channel)) is not None]
+        require(observed == expected, f"Decoded PCAPNG differs from packet CSV: {path}")
 
     def verify_summary(path, rows):
         """Check aggregate vs per-run summary, CSV counts and representative RSSI."""
@@ -52,7 +100,8 @@ def prepare(archive, fifteen_meter_run):
         for row in rows:
             groups[row["run_id"]].append(row)
         for run, agg in groups.items():
-            require(PurePosixPath(run).name == run, "Invalid run ID")
+            require(re.fullmatch(r"[A-Za-z0-9_.-]+", run) and run not in {".", ".."},
+                    "Invalid run ID")
             folder = f"{base}/{run}"
             require(folder not in validated, f"Duplicate run folder: {folder}")
             source = read_csv(archive, f"{folder}/summary.csv")
@@ -63,23 +112,46 @@ def prepare(archive, fifteen_meter_run):
                 packets[p["sample_no"]].append(p)
             require(set(packets) <= {r["sample_no"] for r in source},
                     f"Unexpected packet sample: {folder}")
+            captures = set()
             for row in source:
-                require(row["duration_s"] == "5" and row["frequency_mhz"] == "2452",
+                capture_time(row)
+                require(int(row["duration_s"]) == DURATION
+                        and int(row["frequency_mhz"]) == frequency(channel),
                         f"Unexpected experiment conditions: {folder}")
-                require(f"{folder}/{row['pcapng']}" in names,
-                        f"Missing capture: {folder}/{row['pcapng']}")
+                bssid = row["bssid"].lower()
+                require(re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", bssid),
+                        "Invalid hotspot BSSID")
+                bssids.add(bssid)
+                capture = row["pcapng"]
+                require(PurePosixPath(capture).name == capture and "\\" not in capture
+                        and capture.endswith(".pcapng") and capture not in captures,
+                        f"Invalid or duplicate capture filename: {folder}")
+                captures.add(capture)
+                capture_path = f"{folder}/{capture}"
+                require(capture_path in names, f"Missing capture: {capture_path}")
                 p = packets[row["sample_no"]]
-                good = [x for x in p if x["used_for_stats"] == "1"]
+                require(len({int(x["frame.number"]) for x in p}) == len(p),
+                        f"Duplicate packet numbers: {folder}")
+                good = []
+                for packet in p:
+                    require(all(packet[k] == row[k] for k in
+                                ("sample_no", "capture_start", "distance_m")),
+                            f"Packet context mismatch: {folder}")
+                    value = beacon_rssi(packet, bssid, channel)
+                    require(packet["used_for_stats"] == str(int(value is not None)),
+                            f"Packet FCS, frequency, RSSI or Beacon channel mismatch: {folder}")
+                    if value is not None:
+                        good.append((packet["frame.number"], value))
+                if verify_captures:
+                    verify_capture(capture_path, bssid, good)
                 require(len(p) == int(row["packet_count"]), f"Packet count mismatch: {folder}")
                 require(len(good) == int(row["valid_packet_count"]), f"Valid count mismatch: {folder}")
                 if good:
-                    require(all(x["wlan.fcs.status"] == "1" for x in good),
-                            f"Invalid FCS in used packets: {folder}")
-                    med = statistics.median(float(x["radiotap.dbm_antsignal"]) for x in good)
+                    med = statistics.median(value for _, value in good)
                     require(med == float(row["rssi_dbm"]), f"RSSI median mismatch: {folder}")
                 else:
                     require(not row["rssi_dbm"], f"Unexpected nonempty RSSI: {folder}")
-                expected = "ok" if len(good) >= 10 else (
+                expected = "ok" if len(good) >= MIN_PACKETS else (
                     "low_packet_count" if good else "no_valid_packets")
                 require(row["status"] == expected, f"Status mismatch: {folder}")
             validated.add(folder)
@@ -92,7 +164,7 @@ def prepare(archive, fifteen_meter_run):
                 "source_summary": path}
 
     path1 = root + "scenario1/summary_all.csv"
-    rows1 = read_csv(archive, path1)
+    rows1 = summaries(path1)
     verify_summary(path1, rows1)
     runs = defaultdict(lambda: defaultdict(list))
     for row in rows1:
@@ -101,9 +173,9 @@ def prepare(archive, fifteen_meter_run):
     scenario1 = []
     for distance in DISTANCES:
         candidates = runs[distance]
-        require(len(candidates) == (2 if distance == 15 else 1),
+        require(len(candidates) >= 1 if distance == 15 else len(candidates) == 1,
                 f"Unexpected run count at {distance} m; review manually")
-        ordered = sorted(candidates, key=lambda k: min(r["capture_start"] for r in candidates[k]))
+        ordered = sorted(candidates, key=lambda k: (min(map(capture_time, candidates[k])), k))
         chosen = ordered[-1] if distance == 15 and fifteen_meter_run == "last" else ordered[0]
         for run in ordered:
             group = sorted(candidates[run], key=lambda r: int(r["sample_no"]))
@@ -120,19 +192,17 @@ def prepare(archive, fifteen_meter_run):
                     scenario1.append(a)
 
     scenario2 = []
-    expected_paths = set()
     for repeat in (1, 2):
         for direction, distances in DIRECTIONS.items():
             for order, distance in enumerate(distances, 1):
                 path = root + f"trend/repeat_{repeat}/{direction}/{order:02d}/scenario1/summary_all.csv"
-                expected_paths.add(path)
-                require(path in names, f"Missing trend point: {path}")
-                rows = read_csv(archive, path)
+                rows = summaries(path)
                 verify_summary(path, rows)
                 require(all(float(r["distance_m"]) == distance and r["sample_no"] == "1" for r in rows),
                         f"Trend point mismatch: {path}")
                 # Use the first successful attempt chronologically. Preserve all attempts.
-                ok = sorted((r for r in rows if r["status"] == "ok"), key=lambda r: r["capture_start"])
+                ok = sorted((r for r in rows if r["status"] == "ok"),
+                            key=lambda r: (capture_time(r), r["run_id"]))
                 require(len(ok) >= 1, f"No qualified RSSI at {path}; review before analysis")
                 chosen = ok[0]
                 for row in rows:
@@ -143,21 +213,40 @@ def prepare(archive, fifteen_meter_run):
                     audit.append(a)
                     if selected:
                         scenario2.append(a)
-    found = {n for n in names if n.startswith(root + "trend/") and n.endswith("/summary_all.csv")}
-    require(found == expected_paths, "Unexpected trend directories; review manually")
+    evidence = re.compile(r"^repeat_[12]/(?:approach|away)/0[1-6]/scenario1/"
+                          r"(?:summary_all\.csv|[^/]+/completed\.json)$")
+    require(all(evidence.fullmatch(n[len(root + "trend/"):]) for n in names
+                if n.startswith(root + "trend/")
+                and n.endswith(("/summary_all.csv", "/completed.json"))),
+            "Unexpected trend directories; review manually")
+    require(len(bssids) == 1, "Multiple hotspot BSSIDs in the selected channel dataset")
     require(len(scenario1) == 90 and len(scenario2) == 24, "Unexpected dataset size")
     return scenario1, scenario2, audit
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("archive", type=Path, help="Original experiment ZIP")
+    parser.add_argument("archive", type=Path, help="Original experiment ZIP or capture directory")
     parser.add_argument("--output", type=Path, required=True, help="Separate output directory")
-    parser.add_argument("--15m-run", dest="fifteen_meter_run", choices=("first", "last"), required=True,
+    parser.add_argument("--15m-run", dest="fifteen_meter_run", choices=("first", "last"), default="first",
                         help="Select the first or last 15 m run; document the physical location")
+    parser.add_argument("--channel", type=int, choices=range(1, 14), default=9)
+    parser.add_argument("--verify-captures", action="store_true",
+                        help="Re-decode PCAPNG files with TShark and compare valid frames")
     args = parser.parse_args()
-    with zipfile.ZipFile(args.archive) as archive:
-        scenario1, scenario2, audit = prepare(archive, args.fifteen_meter_run)
+    if args.archive.is_dir():
+        scenario1, scenario2, audit = prepare(CaptureDirectory(args.archive), args.fifteen_meter_run,
+                                              args.channel, args.verify_captures)
+        source_sha256 = None
+    else:
+        with zipfile.ZipFile(args.archive) as archive:
+            scenario1, scenario2, audit = prepare(archive, args.fifteen_meter_run,
+                                                  args.channel, args.verify_captures)
+        with args.archive.open("rb") as raw:
+            digest = hashlib.sha256()
+            for block in iter(lambda: raw.read(1024 * 1024), b""):
+                digest.update(block)
+        source_sha256 = digest.hexdigest()
     args.output.mkdir(parents=True, exist_ok=True)
     write_csv(args.output / "scenario1_provisional.csv",
               ["distance_m", "sample_no", "rssi_dbm"], scenario1)
@@ -171,6 +260,14 @@ def main():
     strict = [r for r in scenario1 if r["status"] == "ok"]
     write_csv(args.output / "scenario1_strict_provisional.csv",
               ["distance_m", "sample_no", "rssi_dbm"], strict)
+    primary = [r for r in strict if float(r["distance_m"]) != 15]
+    write_csv(args.output / "scenario1_primary.csv",
+              ["distance_m", "sample_no", "rssi_dbm"], primary)
+    (args.output / "metadata.json").write_text(json.dumps({
+        "archive_sha256": source_sha256, "channel": args.channel, "duration_s": DURATION,
+        "min_packets": MIN_PACKETS, "verified_pcapng": args.verify_captures,
+        "provisional_15m_run": args.fifteen_meter_run, "primary_count": len(primary),
+    }, indent=2), encoding="utf-8")
     print(f"Scenario 1: {len(scenario1)} planned rows, {len(strict)} status=ok; 15 m run: {args.fifteen_meter_run} (provisional)")
     print(f"Scenario 2: {len(scenario2)} qualified points")
     print(f"Audit: {len(audit)} attempts, {sum(int(r['valid_packet_count']) for r in audit)} valid packet rows")
