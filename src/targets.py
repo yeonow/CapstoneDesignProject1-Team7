@@ -38,6 +38,14 @@ def checkerboard_split(position):
     return "train" if (x // 2 + y // 2) % 2 == 0 else "eval"
 
 
+def _require_chebyshev(distance_metric):
+    """프로젝트가 허용하는 Target 거리 기준은 Chebyshev 하나뿐이다. 다른 값은 대체하지 않고 거부한다."""
+    if distance_metric != "chebyshev":
+        raise ValueError(
+            f"Only Chebyshev target distance is supported for 8-direction search: {distance_metric!r}"
+        )
+
+
 def candidate_targets(grid_size, start, min_distance, split=None, *, distance_metric="chebyshev"):
     """시작점에서 체비쇼프 거리 min_distance 이상인 칸 목록. split을 주면 해당 집합의 칸만 남긴다.
 
@@ -45,10 +53,7 @@ def candidate_targets(grid_size, start, min_distance, split=None, *, distance_me
     """
     if split not in (None, *PHASES):
         raise ValueError(f"split must be None, 'train', or 'eval': {split!r}")
-    if distance_metric != "chebyshev":
-        raise ValueError(
-            f"Only Chebyshev target distance is supported for 8-direction search: {distance_metric!r}"
-        )
+    _require_chebyshev(distance_metric)
     return tuple(
         (x, y)
         for y in range(grid_size) for x in range(grid_size)
@@ -58,13 +63,17 @@ def candidate_targets(grid_size, start, min_distance, split=None, *, distance_me
 
 
 def validate_target_config():
-    """현재 config의 Target 설정을 확인하고 모드를 반환한다."""
+    """현재 config의 Target 설정을 확인하고 모드를 반환한다.
+
+    거리 기준은 후보를 쓰지 않는 fixed 모드를 포함해 모든 모드에서 Chebyshev만 허용한다.
+    """
     mode = config.TARGET_MODE
     if mode not in TARGET_MODES:
         raise ValueError(f"TARGET_MODE must be one of {TARGET_MODES}: {mode!r}")
     min_distance = config.TARGET_MIN_DISTANCE
     if isinstance(min_distance, bool) or not isinstance(min_distance, int) or min_distance < 1:
         raise ValueError("TARGET_MIN_DISTANCE must be a positive integer.")
+    _require_chebyshev(config.TARGET_DISTANCE_METRIC)
     if mode != "fixed":
         for phase in PHASES:
             if not target_candidates(phase):
