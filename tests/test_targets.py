@@ -58,6 +58,18 @@ def test_paper_chebyshev_split_candidates_and_reproducible_choice(monkeypatch):
             == [targets.evaluation_target(evaluation, 43, e) for e in range(1, 21)])
 
 
+@pytest.mark.parametrize("mode", ["random", "split"])
+def test_manhattan_target_distance_is_rejected(monkeypatch, mode):
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.candidate_targets(20, (0, 0), 5, distance_metric="manhattan")
+    monkeypatch.setattr(config, "TARGET_MODE", mode)
+    monkeypatch.setattr(config, "TARGET_DISTANCE_METRIC", "manhattan")
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.validate_target_config()
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.target_candidates("eval")
+
+
 @pytest.mark.parametrize("start,target,expected", [
     ((0, 0), (0, 0), 0),
     ((0, 0), (3, 3), 3),
