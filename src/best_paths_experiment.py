@@ -129,8 +129,14 @@ def paper_config():
 
 def run_best_path_experiment(*, train_episodes=1000, eval_episodes=100, runs=30,
                              seed=None, output_dir=DEFAULT_OUTPUT):
-    """Retrain each run and record only actual greedy/random evaluation paths."""
+    """Retrain each run and record only actual greedy/random evaluation paths.
+
+    An existing output path is refused before any setting, training or file write,
+    so earlier results (including --output-dir targets) are never overwritten.
+    """
     directory = Path(__file__).resolve().parents[1] / output_dir
+    if directory.exists():
+        raise FileExistsError(f"Best Path output already exists; choose a new --output-dir: {directory}")
     with paper_config():
         result = compare_algorithms(
             train_episodes=train_episodes, eval_episodes=eval_episodes, runs=runs,
