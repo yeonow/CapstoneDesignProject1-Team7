@@ -16,7 +16,8 @@ from src.compare_algorithms import calculate_metrics, compare_algorithms
 from src.plot_paths import plot_best_paths
 
 
-DEFAULT_OUTPUT = Path("results/best_paths_8dir/random_target/grid_20x20")
+# random_target/에는 과거 Manhattan 후보 조건의 결과가 있으므로 Chebyshev 결과는 별도 폴더에 저장한다.
+DEFAULT_OUTPUT = Path("results/best_paths_8dir/chebyshev_target/grid_20x20")
 
 
 def validate_best_path(record):
