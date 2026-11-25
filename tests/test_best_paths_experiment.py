@@ -77,6 +77,12 @@ def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_
         saved = json.loads((output / f"{stem}_best.json").read_text(encoding="utf-8"))
         assert saved["trajectory"]["path"] == [list(p) for p in selected["path"]]
         assert saved["train_target_count"] == 187 and saved["eval_target_count"] == 188
+        assert (saved["target_distance_metric"], saved["target_min_distance"],
+                saved["target_candidate_count"], saved["shortest_distance_metric"]) == (
+                    "chebyshev", 5, 375, "chebyshev")
+        target = tuple(selected["target_position"])
+        assert paper.targets.shortest_path_steps((0, 0), target) >= 5
+        assert paper.targets.checkerboard_split(target) == "eval"
         assert saved["trajectory"]["train_seed"] == 42 + 2 * (selected["run"] - 1)
     assert not (output / "paths").exists()  # no representative artifacts
     for filename in ("algorithm_comparison_episodes.csv", "algorithm_comparison_summary.csv"):
@@ -87,6 +93,8 @@ def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_
     with (output / "experiment_summary.csv").open(encoding="utf-8", newline="") as file:
         summaries = list(csv.DictReader(file))
     assert len(summaries) == 2 and all(int(row["total_eval_episodes"]) == 16 for row in summaries)
+    assert all((row["target_distance_metric"], row["train_target_count"], row["eval_target_count"])
+               == ("chebyshev", "187", "188") for row in summaries)
     # The plot keeps every segment and the original diagonal geometry.
     figure = Figure()
     ax = figure.subplots()
