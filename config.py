@@ -102,6 +102,13 @@ ETA_NLOS = 20.0
 PATH_LOSS_EXPONENT = 2.0        # κ: 자유공간에 가까운 거리 감쇠를 가정하는 출발값
 MULTIPATH_FADING = 1.0          # nu: 현재 고정 진폭 계수, 1이면 추가 multipath 영향 없음
 NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(dB)
+
+# RSSI Level 경계(dBm). Baseline과 제출 논문 결과에 쓴 기존 경계다.
+RSSI_THRESHOLDS = [-80.0, -70.0, -60.0, -50.0]
+# Level 경계 선택 (src/state_reward.rssi_thresholds). "original": RSSI_THRESHOLDS를 그대로 사용
+# "calibrated_adjusted": RSSI_MODEL="calibrated" 전용. 기존 경계를 Baseline/Calibrated의
+#   1m·15m noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py). 종프 최종 발표용 추가 개선.
+RSSI_LEVEL_MODE = "original"
 CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
 
 # 기존 논문 모드는 기본값으로 보존한다. 보정 사용 시 분석에서 저장한 JSON을 명시한다.

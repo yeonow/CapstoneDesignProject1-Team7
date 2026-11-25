@@ -22,6 +22,7 @@ TREND_DOWN, TREND_KEEP, TREND_UP = -1, 0, 1
 # ---------------------------------------------------------------
 _DEFAULTS = {
     "RSSI_THRESHOLDS": [-80.0, -70.0, -60.0, -50.0],
+    "RSSI_LEVEL_MODE": "original",
     "TREND_THRESHOLD": 2.0,   # dBm. 이보다 크게 변해야 증가/감소로 인정 (노이즈보다 커야 함)
     "REWARD_UP": 1.0,
     "REWARD_KEEP": 0.0,
@@ -58,21 +59,40 @@ def get_representative_rssi(samples):
 # ---------------------------------------------------------------
 # 2) RSSI Level
 # ---------------------------------------------------------------
+RSSI_LEVEL_MODES = ("original", "calibrated_adjusted")
+
+
+def rssi_thresholds():
+    """현재 RSSI_LEVEL_MODE의 Level 경계. 학습과 평가가 같은 경계를 쓰도록 State 생성 시마다 조회한다.
+
+    "original": RSSI_THRESHOLDS를 그대로 사용한다(기본값, 기존 동작).
+    "calibrated_adjusted": RSSI_MODEL="calibrated" 전용. 기존 경계를 두 모델의 1m/15m
+        noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py).
+    """
+    mode = _cfg("RSSI_LEVEL_MODE")
+    if mode == "original":
+        return _cfg("RSSI_THRESHOLDS")
+    if mode == "calibrated_adjusted":
+        from src.rssi_levels import calibrated_adjusted_thresholds
+        return calibrated_adjusted_thresholds()
+    raise ValueError(f"RSSI_LEVEL_MODE must be one of {RSSI_LEVEL_MODES}: {mode!r}")
+
+
 def get_rssi_level(rssi):
     """
     RSSI 세기를 구간 번호로 변환. 클수록 신호가 강함.
-    thresholds = [-80, -70, -60, -50]
+    thresholds = [-80, -70, -60, -50]  (original 모드)
       rssi < -80        -> 0
       -80 <= rssi < -70 -> 1
       ...
       rssi >= -50       -> 4
     """
-    return bisect_right(_cfg("RSSI_THRESHOLDS"), rssi)
+    return bisect_right(rssi_thresholds(), rssi)
 
 
 def num_rssi_levels():
     """Level 종류 수 (Q-table 크기 계산, 로그용)."""
-    return len(_cfg("RSSI_THRESHOLDS")) + 1
+    return len(rssi_thresholds()) + 1
 
 
 # ---------------------------------------------------------------
