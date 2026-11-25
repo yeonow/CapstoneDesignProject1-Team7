@@ -1,6 +1,7 @@
 """Paper conditions, actual episode provenance, RNG integrity and artifacts."""
 
 import csv
+import inspect
 import json
 import random
 import sys
@@ -32,6 +33,19 @@ def test_paper_settings_restore_on_exception():
 def test_default_output_is_separate_from_past_manhattan_results():
     assert paper.DEFAULT_OUTPUT == Path("results/best_paths_8dir/chebyshev_target/grid_20x20")
     assert paper.DEFAULT_OUTPUT != Path("results/best_paths_8dir/random_target/grid_20x20")
+
+
+def test_function_and_cli_defaults_match_final_paper_counts(monkeypatch):
+    expected = {"train_episodes": 3000, "eval_episodes": 100, "runs": 100}
+    parameters = inspect.signature(paper.run_best_path_experiment).parameters
+    assert {name: parameters[name].default for name in expected} == expected
+    assert parameters["output_dir"].default == paper.DEFAULT_OUTPUT
+    captured = {}
+    # 기본 CLI 인자만 확인하며 실제 100 Run 실험은 실행하지 않는다.
+    monkeypatch.setattr(paper, "run_best_path_experiment", lambda **kwargs: captured.update(kwargs))
+    monkeypatch.setattr(sys, "argv", ["best_paths_experiment"])
+    paper.main()
+    assert captured == {**expected, "seed": config.RANDOM_SEED, "output_dir": paper.DEFAULT_OUTPUT}
 
 
 @pytest.mark.parametrize("cli", [False, True])
