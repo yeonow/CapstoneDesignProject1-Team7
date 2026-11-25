@@ -20,9 +20,9 @@ def test_paper_settings_restore_on_exception():
     with pytest.raises(RuntimeError):
         with paper.paper_config():
             assert config.MAX_STEPS == 400 and config.NOISE_STD == 2
-            assert config.TARGET_DISTANCE_METRIC == "manhattan"
-            assert len(paper.targets.target_candidates("train")) == 193
-            assert len(paper.targets.target_candidates("eval")) == 192
+            assert config.TARGET_DISTANCE_METRIC == "chebyshev"
+            assert len(paper.targets.target_candidates("train")) == 187
+            assert len(paper.targets.target_candidates("eval")) == 188
             raise RuntimeError("interrupted")
     assert vars(config) == previous
 
@@ -76,7 +76,7 @@ def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_
         paper.validate_best_path(selected)
         saved = json.loads((output / f"{stem}_best.json").read_text(encoding="utf-8"))
         assert saved["trajectory"]["path"] == [list(p) for p in selected["path"]]
-        assert saved["train_target_count"] == 193 and saved["eval_target_count"] == 192
+        assert saved["train_target_count"] == 187 and saved["eval_target_count"] == 188
         assert saved["trajectory"]["train_seed"] == 42 + 2 * (selected["run"] - 1)
     assert not (output / "paths").exists()  # no representative artifacts
     for filename in ("algorithm_comparison_episodes.csv", "algorithm_comparison_summary.csv"):

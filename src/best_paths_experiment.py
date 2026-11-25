@@ -51,8 +51,8 @@ def save_best_path_results(result, directory, *, train_episodes, eval_episodes, 
     directory.mkdir(parents=True, exist_ok=True)
     settings = {
         "grid_size": 20, "target_mode": "split", "target_label": "Random Target",
-        "target_distance_metric": "manhattan", "target_min_distance": 5,
-        "target_candidate_count": 385, "train_target_count": 193, "eval_target_count": 192,
+        "target_distance_metric": "chebyshev", "target_min_distance": 5,
+        "target_candidate_count": 375, "train_target_count": 187, "eval_target_count": 188,
         "shortest_distance_metric": "chebyshev", "max_steps": 400,
         "noise_std": 2.0, "noise_distribution": "Gaussian", "seed": seed,
         "runs": runs, "train_episodes": train_episodes, "eval_episodes": eval_episodes,
@@ -88,7 +88,7 @@ def save_best_path_results(result, directory, *, train_episodes, eval_episodes, 
             "grid_size": 20, "runs": runs, "train_episodes": train_episodes if algorithm == "q_learning" else 0,
             "eval_episodes_per_run": eval_episodes, "total_eval_episodes": len(episodes),
             "seed": seed, "max_steps": 400, "noise_std": 2.0,
-            "target_distance_metric": "manhattan", "train_target_count": 193, "eval_target_count": 192,
+            "target_distance_metric": "chebyshev", "train_target_count": 187, "eval_target_count": 188,
             **calculate_metrics(episodes), "path_ratio_on_success": fmean(ratios) if ratios else None,
             **{f"best_{key}": record[key] if record is not None else None for key in (
                 "run", "episode", "train_seed", "eval_seed", "start_position", "target_position",
@@ -108,7 +108,7 @@ def paper_config():
     settings = {
         "GRID_SIZE": 20, "AGENT_START": (0, 0), "TARGET_POSITION": (19, 19),
         "MAX_STEPS": 400, "NOISE_STD": 2.0, "TARGET_MODE": "split",
-        "TARGET_MIN_DISTANCE": 5, "TARGET_DISTANCE_METRIC": "manhattan",
+        "TARGET_MIN_DISTANCE": 5, "TARGET_DISTANCE_METRIC": "chebyshev",
     }
     previous = {name: getattr(config, name) for name in settings}
     try:
@@ -118,7 +118,7 @@ def paper_config():
         if len(config.ACTIONS) != 8:
             raise ValueError("Paper experiment requires eight actions")
         counts = tuple(len(targets.target_candidates(phase)) for phase in ("train", "eval"))
-        if counts != (193, 192):
+        if counts != (187, 188):
             raise ValueError(f"Unexpected train/eval candidate counts: {counts}")
         yield
     finally:
