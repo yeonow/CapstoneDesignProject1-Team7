@@ -70,6 +70,23 @@ def test_manhattan_target_distance_is_rejected(monkeypatch, mode):
         targets.target_candidates("eval")
 
 
+@pytest.mark.parametrize("mode", ["fixed", "random", "split"])
+@pytest.mark.parametrize("metric", ["manhattan", "euclidean", "CHEBYSHEV", ""])
+def test_invalid_distance_metric_is_rejected_in_every_mode(monkeypatch, mode, metric):
+    monkeypatch.setattr(config, "TARGET_MODE", mode)
+    monkeypatch.setattr(config, "TARGET_DISTANCE_METRIC", metric)
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.validate_target_config()
+
+
+def test_fixed_mode_with_chebyshev_keeps_its_single_target():
+    assert config.TARGET_DISTANCE_METRIC == "chebyshev"
+    assert targets.validate_target_config() == "fixed"
+    assert targets.target_candidates("train") is None and targets.target_candidates("eval") is None
+    results = comparison.evaluate_random_agent(3, seed=1)
+    assert {(row["target_x"], row["target_y"]) for row in results} == {config.TARGET_POSITION}
+
+
 @pytest.mark.parametrize("start,target,expected", [
     ((0, 0), (0, 0), 0),
     ((0, 0), (3, 3), 3),
