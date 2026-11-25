@@ -10,7 +10,7 @@ Original files copied byte-for-byte to data/rssi_calibration_20261125; SHA-256 c
 
 ## 현재 상태
 - 데이터 검증, 감사 대조, 피팅/민감도, Trend, 환경 선택 및 실제 소규모 smoke 완료.
-- 최종 테스트와 변경 범위 검토 완료. 마지막 절차는 새 브랜치 푸시다.
+- 최종 테스트와 변경 범위 검토 완료. 새 브랜치의 원격 푸시도 성공했다.
 - 아래 checkpoint는 개발 이력이다. 최종 수치/한계/실행 방법은 문서 후반을 따른다.
 
 Do not infer spatial shadow variance from temporal repeats.
@@ -209,5 +209,8 @@ ba463fa는 Git 자동 줄바꿈 변환에 따른 원본 SHA 불일치를 해결�
 줄바꿈 보존 변경 후 데이터 테스트 8개와 Git blob SHA 4개 일치를 추가 확인했다.
 기존 코드/원본을 다시 만들지 말고 이 Worktree에서 git status/log를 먼저 확인한다.
 `git diff --check`와 main 대비 변경 범위를 검토했다. Q-Learning/State/Reward,
-Target/Seed 규칙 및 기존 results 파일은 diff가 없다. 현재 남은 완료 절차는 새 브랜치 푸시다.
+Target/Seed 규칙 및 기존 results 파일은 diff가 없다.
+660e64f까지의 12개 커밋을 `origin/feature/rssi-realworld-calibration`에 푸시했고,
+이 완료 기록을 별도 문서 커밋으로 추가한다. PR 생성과 main 병합은 하지 않았다.
+요청 범위의 구현/검증은 완료됐다. 로컬 결과는 위 경로에서 확인하고 후속 연구는 별도 범위로 진행한다.
 100 Run, 모든 Noise 조건 연구, 단절 모델/다른 지역 일반화는 이번 범위 밖이다.
