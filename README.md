@@ -10,7 +10,7 @@ python -m src.best_paths_experiment
 ```
 
 전용 모듈은 20×20 Grid, 시작 (0, 0), 내부 `split` 모드(논문 명칭 **Random Target**),
-Run당 Q-Learning 1,000 Episode 학습 및 100 Episode 평가, 30 Runs, 최대 400 Step,
+Run당 Q-Learning 3,000 Episode 학습 및 100 Episode 평가, 독립 100 Runs, 최대 400 Step,
 Gaussian Noise 표준편차 2 dB를 사용합니다. 각 Run에서 새 정책을 학습하고 greedy 평가합니다.
 기존 Random Search의 8방향 균등 무작위 행동은 유지합니다.
 
@@ -28,10 +28,13 @@ RSSI 전파 감쇠는 Agent–Target 사이의 **Euclidean 거리**로 계산합
 알고리즘별로 독립 선정합니다. Representative Path는 생성하지 않습니다.
 두 경로의 Target은 다를 수 있으므로 경로 길이를 동일 Target의 성능 비교로 해석하면 안 됩니다.
 
-결과는 `results/best_paths_8dir/random_target/grid_20x20/`에 저장합니다.
-현재 저장소의 이 폴더 파일은 Target 후보를 맨해튼 거리 기준(385/193/192)으로 선정했던 **과거 실행 결과**이며
-(`target_distance_metric: manhattan`), 체비쇼프 기준으로 다시 실행하지 않았습니다.
-기본 명령을 다시 실행하면 이 파일들이 갱신되므로 과거 결과를 보존하려면 `--output-dir`로 새 폴더를 지정합니다.
+결과는 기본적으로 `results/best_paths_8dir/chebyshev_target/grid_20x20/`에 저장합니다.
+출력 폴더(`--output-dir`로 지정한 경로 포함)가 이미 있으면 학습을 시작하거나 파일을 쓰기 전에
+오류로 중단합니다. 기존 결과를 덮어쓰지 않으므로 실행할 때마다 존재하지 않는 새 폴더를 사용합니다.
+
+`results/best_paths_8dir/random_target/grid_20x20/`의 파일은 Target 후보를 맨해튼 거리 기준(385/193/192)으로,
+1,000 Episode/30 Runs로 실행했던 **과거 결과**이며(`target_distance_metric: manhattan`) 그대로 보존합니다.
+현재 체비쇼프 기준과 기본 횟수로 다시 실행한 결과가 아닙니다.
 
 - `q_learning_best.png`, `random_search_best.png`
 - `best_path_comparison.png`, `best_path_comparison.pdf`
@@ -40,7 +43,7 @@ RSSI 전파 감쇠는 Agent–Target 사이의 **Euclidean 거리**로 계산합
 
 기존 형식의 `algorithm_comparison_episodes.csv`와 `algorithm_comparison_summary.csv`도
 같은 폴더에 저장합니다. 전체 평가 Step 평균에는 실패를 포함하고 Path Ratio 평균에는 성공만 포함합니다.
-재실행하면 지정 폴더의 같은 이름 파일을 갱신합니다. 기존 `results/path_smoke`는 사용하지 않습니다.
+기존 `results/path_smoke`는 사용하지 않습니다.
 성공이 없으면 JSON `trajectory`는 `null`, `status`는 `no_successful_episode`이며 그래프에 표시합니다.
 
 빠른 확인과 테스트:
@@ -51,7 +54,8 @@ python -m pytest -q -p no:cacheprovider
 ```
 
 `--train-episodes`, `--eval-episodes`, `--runs`, `--seed`, `--output-dir`만 변경할 수 있습니다.
-논문 전체 실험은 인자를 생략한 기본 명령을 사용합니다.
+빠른 확인 폴더도 이미 있으면 중단되므로 다시 실행할 때는 새 `--output-dir`를 지정합니다.
+논문 전체 실험은 인자를 생략한 기본 명령(3,000 Episode/Run, 100 Episode 평가, 100 Runs)을 사용합니다.
 
 ## 발표용 경로 비교 (Target 17, 18)
 
