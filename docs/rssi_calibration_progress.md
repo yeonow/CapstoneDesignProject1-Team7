@@ -14,6 +14,7 @@ Original files copied byte-for-byte to data/rssi_calibration_20261125; SHA-256 c
 - 아래 checkpoint는 개발 이력이다. 최종 수치/한계/실행 방법은 문서 후반을 따른다.
 - 후속 작업: smoke의 Target 후보 거리를 최종 논문 기준인 Chebyshev로 정정했다.
   Manhattan으로 기록된 smoke 내용은 정정 전 이력이며, 현재 결과는 "Chebyshev Target 기준 정정" 절을 따른다.
+- 2차 후속: 모든 8방향 실험의 Target 후보 기준을 Chebyshev로 통일했다("8방향 실험 Target 거리 기준 통일" 절).
 
 Do not infer spatial shadow variance from temporal repeats.
 Resume from this Worktree; inspect git log and this file before changing any source.
@@ -207,6 +208,29 @@ Chebyshev ≥ 5다(실제 최소 6).
 Random은 RSSI를 행동 선택에 쓰지 않으므로 두 모델에서 결과가 같다.
 1 Run/10 Episode의 동작 확인이며 성능 결론이 아니다. 결과에 따라 알고리즘/파라미터를 조정하지 않았다.
 
+## 8방향 실험 Target 거리 기준 통일 (2차 후속)
+
+사용자 결정에 따라 앞으로의 모든 8방향 탐색 실험은 Target 후보를 Chebyshev 거리 ≥ 5로 선정한다.
+위 절의 "다른 실험의 Manhattan 설정은 변경하지 않았다"는 1차 정정 당시의 기록이며, 이후 다음과 같이 통일했다.
+
+- `src/targets.py`: Manhattan 분기를 제거하고 `"chebyshev"` 외의 거리 기준은 `ValueError`로 거부한다.
+  `distance_metric` 인자, 후보 순서, 2x2 체커보드 분할, Target RNG/Seed 규칙은 유지한다.
+- `src/best_paths_experiment.py`: 실행 설정, 후보 수 검사, 저장 메타데이터를 Chebyshev와 375/187/188로 바꿨다.
+  Best Path 선정, 최단 Step 계산, 경로 검증, 그림 생성은 변경하지 않았다.
+- `config.py` 주석, `README.md`, `tests/test_targets.py`, `tests/test_best_paths_experiment.py`를 현재 조건에 맞췄다.
+
+| 항목 (20x20, 시작 (0,0), split) | 현재 기준 |
+|---|---|
+| Target 후보 거리 | Chebyshev ≥ 5 (Manhattan 지정 시 오류) |
+| 후보 수 | 375 = 학습 187 + 평가 188 |
+| 최단 이동 횟수 | Chebyshev 거리 |
+| RSSI 전파 감쇠 거리 | Agent–Target Euclidean 거리 (변경 없음) |
+
+20m 보정 RSSI 예측(-80.384 dBm)과 보정 관련 테스트는 변경 없이 통과한다.
+과거 기록은 보존한다. `results/best_paths_8dir/random_target/grid_20x20/`의 Best Path 결과(1,000 Episode, 30 Run)는
+Manhattan(385/193/192)으로 실행됐고 다시 실행하지 않았다. 이 문서의 정정 전 Manhattan smoke 기록도 그대로 둔다.
+Best Path 동작 확인은 임시 폴더에 2 Run, 학습 2, 평가 8로만 실행했으며 연구 결과가 아니다.
+
 ## 실행 방법
 
 분석 의존성은 기존 `experiments/field_measurement/analysis/requirements.txt`를 재사용한다.
@@ -279,3 +303,8 @@ Target/Seed 규칙 및 기존 results 파일은 diff가 없다.
 후속 Chebyshev 정정은 e603ef2 이후 4852194 smoke 거리 기준 → 8bc4c88 Target 분할 테스트 →
 6cc1f04 20m 외삽 테스트 → 이 문서 커밋 순서로 저장했다. 작업 전 전체 379개, 이후 **389 passed**다.
 회귀 파라미터, 보정 프로필, 원본 CSV, RSSI 수식/Noise/State/Reward, Target/Seed 함수는 변경하지 않았다.
+
+2차 Chebyshev 통일은 9ddec42 이후 84a263f Best Path 실행 조건/메타데이터 → 26167fa Best Path 메타데이터 테스트 →
+1ab9d52 Target 테스트 → 9a8a6d0 targets.py Chebyshev 전용 → eb621d6 config 주석 → f9f8b9f README →
+이 문서 커밋 순서로 저장했다. 작업 전 전체 389개, 이후 **391 passed**다.
+RSSI 수식/Euclidean 거리, 보정 코드/파라미터/프로필, 원본 CSV, Q-Learning/Random, Seed 규칙, 기존 results는 변경하지 않았다.
