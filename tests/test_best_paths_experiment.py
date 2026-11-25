@@ -1,8 +1,11 @@
 """Paper conditions, actual episode provenance, RNG integrity and artifacts."""
 
 import csv
+import inspect
 import json
 import random
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -20,11 +23,67 @@ def test_paper_settings_restore_on_exception():
     with pytest.raises(RuntimeError):
         with paper.paper_config():
             assert config.MAX_STEPS == 400 and config.NOISE_STD == 2
-            assert config.TARGET_DISTANCE_METRIC == "manhattan"
-            assert len(paper.targets.target_candidates("train")) == 193
-            assert len(paper.targets.target_candidates("eval")) == 192
+            assert config.TARGET_DISTANCE_METRIC == "chebyshev"
+            assert len(paper.targets.target_candidates("train")) == 187
+            assert len(paper.targets.target_candidates("eval")) == 188
             raise RuntimeError("interrupted")
     assert vars(config) == previous
+
+
+def test_default_output_is_separate_from_past_manhattan_results():
+    assert paper.DEFAULT_OUTPUT == Path("results/best_paths_8dir/chebyshev_target/grid_20x20")
+    assert paper.DEFAULT_OUTPUT != Path("results/best_paths_8dir/random_target/grid_20x20")
+
+
+def test_function_and_cli_defaults_match_final_paper_counts(monkeypatch):
+    expected = {"train_episodes": 3000, "eval_episodes": 100, "runs": 100}
+    parameters = inspect.signature(paper.run_best_path_experiment).parameters
+    assert {name: parameters[name].default for name in expected} == expected
+    assert parameters["output_dir"].default == paper.DEFAULT_OUTPUT
+    captured = {}
+    # 기본 CLI 인자만 확인하며 실제 100 Run 실험은 실행하지 않는다.
+    monkeypatch.setattr(paper, "run_best_path_experiment", lambda **kwargs: captured.update(kwargs))
+    monkeypatch.setattr(sys, "argv", ["best_paths_experiment"])
+    paper.main()
+    assert captured == {**expected, "seed": config.RANDOM_SEED, "output_dir": paper.DEFAULT_OUTPUT}
+
+
+@pytest.mark.parametrize("cli", [False, True])
+def test_existing_output_is_refused_before_training(monkeypatch, tmp_path, cli):
+    output = tmp_path / "existing"
+    output.mkdir()
+    (output / "past.json").write_text("past result", encoding="utf-8")
+
+    def must_not_train(**kwargs):
+        raise AssertionError("training must not start for an existing output")
+
+    monkeypatch.setattr(paper, "compare_algorithms", must_not_train)
+    previous = vars(config).copy()
+    with pytest.raises(FileExistsError, match="already exists"):
+        if cli:
+            monkeypatch.setattr(sys, "argv", ["best_paths_experiment", "--train-episodes", "1",
+                                              "--eval-episodes", "1", "--runs", "1",
+                                              "--output-dir", str(output)])
+            paper.main()
+        else:
+            paper.run_best_path_experiment(train_episodes=1, eval_episodes=1, runs=1,
+                                           output_dir=output)
+    assert [path.name for path in output.iterdir()] == ["past.json"]
+    assert (output / "past.json").read_text(encoding="utf-8") == "past result"
+    assert vars(config) == previous
+
+
+def test_new_output_is_saved_and_cannot_be_overwritten(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "LOG_INTERVAL", 0)
+    output = tmp_path / "chebyshev_target" / "grid_20x20"
+    kwargs = dict(train_episodes=1, eval_episodes=2, runs=1, seed=42, output_dir=output)
+    paper.run_best_path_experiment(**kwargs)
+    saved = {path.name: path.read_bytes() for path in output.iterdir()}
+    assert {"q_learning_best.json", "random_search_best.json", "experiment_summary.csv",
+            "algorithm_comparison_episodes.csv", "best_path_comparison.pdf"} <= set(saved)
+    with pytest.raises(FileExistsError):
+        paper.run_best_path_experiment(**kwargs)
+    assert {path.name: path.read_bytes() for path in output.iterdir()} == saved
 
 
 def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_path):
@@ -76,7 +135,13 @@ def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_
         paper.validate_best_path(selected)
         saved = json.loads((output / f"{stem}_best.json").read_text(encoding="utf-8"))
         assert saved["trajectory"]["path"] == [list(p) for p in selected["path"]]
-        assert saved["train_target_count"] == 193 and saved["eval_target_count"] == 192
+        assert saved["train_target_count"] == 187 and saved["eval_target_count"] == 188
+        assert (saved["target_distance_metric"], saved["target_min_distance"],
+                saved["target_candidate_count"], saved["shortest_distance_metric"]) == (
+                    "chebyshev", 5, 375, "chebyshev")
+        target = tuple(selected["target_position"])
+        assert paper.targets.shortest_path_steps((0, 0), target) >= 5
+        assert paper.targets.checkerboard_split(target) == "eval"
         assert saved["trajectory"]["train_seed"] == 42 + 2 * (selected["run"] - 1)
     assert not (output / "paths").exists()  # no representative artifacts
     for filename in ("algorithm_comparison_episodes.csv", "algorithm_comparison_summary.csv"):
@@ -87,6 +152,8 @@ def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_
     with (output / "experiment_summary.csv").open(encoding="utf-8", newline="") as file:
         summaries = list(csv.DictReader(file))
     assert len(summaries) == 2 and all(int(row["total_eval_episodes"]) == 16 for row in summaries)
+    assert all((row["target_distance_metric"], row["train_target_count"], row["eval_target_count"])
+               == ("chebyshev", "187", "188") for row in summaries)
     # The plot keeps every segment and the original diagonal geometry.
     figure = Figure()
     ax = figure.subplots()

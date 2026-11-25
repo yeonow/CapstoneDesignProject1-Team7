@@ -1,0 +1,4 @@
+# Final measured inputs are byte-preserved: their SHA-256 is part of calibration provenance.
+# Preserve the original CRLF as a line ending, while still checking real trailing whitespace.
+data/rssi_calibration_20261125/*.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/rssi_calibration_20261125/README_DATA.md -text

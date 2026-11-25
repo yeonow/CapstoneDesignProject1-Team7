@@ -42,11 +42,14 @@ MAX_STEPS = 100
 # Target 배치 방식 (src/targets.py). compare_algorithms / compare_noise_sweep /
 # compare_grid_sizes 비교 실험에 적용된다.
 # "fixed": TARGET_POSITION(또는 GRID_ENV_SETTINGS의 target_position) 한 곳만 사용
-# "random": Episode마다 무작위 Target (학습·평가 같은 후보) -> 본 실험
-# "split": 2×2 블록 체커보드로 학습용/평가용 Target 칸 분리 -> 일반화 보조 실험
+# "random": Episode마다 무작위 Target (학습·평가가 같은 후보 공유)
+# "split": Episode마다 무작위 Target, 2×2 블록 체커보드로 학습용/평가용 후보 분리
+#          -> 최종 논문 조건(논문 명칭 Random Target): 20×20, Chebyshev ≥ 5,
+#             후보 375개 = 학습 187개 + 평가 188개
+# 전역 기본값 fixed는 유지하며, 논문 조건으로 실행할 때 split을 지정한다(예: src.best_paths_experiment).
 TARGET_MODE = "fixed"
 TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 이동 횟수(8방향)
-TARGET_DISTANCE_METRIC = "chebyshev"  # 후보 필터: 기존 기본값 유지, 논문 실험은 manhattan
+TARGET_DISTANCE_METRIC = "chebyshev"  # 후보 필터: 8방향 최단 이동 횟수, chebyshev만 지원(manhattan 거부)
 
 GRID_SIZES = (10, 20)
 GRID_ENV_SETTINGS = {
@@ -100,6 +103,11 @@ PATH_LOSS_EXPONENT = 2.0        # κ: 자유공간에 가까운 거리 감쇠를
 MULTIPATH_FADING = 1.0          # nu: 현재 고정 진폭 계수, 1이면 추가 multipath 영향 없음
 NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(dB)
 CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
+
+# 기존 논문 모드는 기본값으로 보존한다. 보정 사용 시 분석에서 저장한 JSON을 명시한다.
+# 실측 반복 SD를 공간적 shadow fading으로 대체하지 않으므로 NOISE_STD는 그대로 유지한다.
+RSSI_MODEL = "baseline"          # "baseline" 또는 "calibrated"
+RSSI_CALIBRATION_FILE = None
 
 
 # =========================

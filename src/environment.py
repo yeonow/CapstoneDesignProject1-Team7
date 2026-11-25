@@ -30,6 +30,7 @@ class RSSIGridEnv:
         min_distance_m: float,
         noise_floor_dbm: float,
         channel_state: str = "los",
+        calibrated_reference_rx_power_dbm: float | None = None,
     ) -> None:
         """가상 공간과 RSSI 설정을 준비한다. 객체 생성 자체는 RSSI 측정이 아니다.
 
@@ -75,6 +76,11 @@ class RSSIGridEnv:
             raise ValueError("noise_std must be finite and nonnegative")
         if channel_state not in ("los", "nlos"):
             raise ValueError('channel_state must be "los" or "nlos"')
+        if calibrated_reference_rx_power_dbm is not None:
+            if not math.isfinite(calibrated_reference_rx_power_dbm) or channel_state != "los":
+                raise ValueError("Measured calibration requires finite reference and LoS")
+        # None이면 기존 식 (2)를 그대로 사용한다. 실측 종합 기준값은 송신 전력 추정값이 아니다.
+        self.calibrated_reference_rx_power_dbm = calibrated_reference_rx_power_dbm
 
         self.grid_size = grid_size
         self.max_steps = max_steps
@@ -217,7 +223,7 @@ class RSSIGridEnv:
         fc = self.carrier_frequency_hz  # 반송파 주파수(Hz)
         c = 299_792_458.0  # 빛의 속도(m/s); 실험 조정값이 아닌 물리 상수
         # 작은 선형 gain을 먼저 만들지 않고 로그의 합으로 계산해 underflow를 피한다.
-        return (
+        gain_db = (
             -10.0 * math.log10(eta)
             + 20.0 * math.log10(nu)
             + omega
@@ -226,6 +232,17 @@ class RSSIGridEnv:
                 - math.log10(fc) - math.log10(effective_distance)
             )
         )
+        if self.calibrated_reference_rx_power_dbm is not None:
+            if channel_state != "los":
+                raise ValueError("Measured calibration has no NLoS observations")
+            # 식 (2)의 거리 기울기와 1회 Gaussian 샘플은 보존하고, 1m 절편만 보정한다.
+            # RSSI만으로 tx/eta/nu를 분리할 수 없어 이들의 종합 효과를 기준 P_rx로 흡수한다.
+            # 주파수 변경에 따른 전이 성능은 검증하지 않았으며 실측 채널에서만 사용한다.
+            reference_gain = (-10.0 * math.log10(eta) + 20.0 * math.log10(nu)
+                              + 10.0 * kappa * (math.log10(c) - math.log10(4.0 * math.pi)
+                                                - math.log10(fc)))
+            gain_db += self.calibrated_reference_rx_power_dbm - self.tx_power_dbm - reference_gain
+        return gain_db
 
     def _generate_rssi(self) -> float:
         """채널을 한 번 샘플링해 P_rx, SNR, RSSI를 함께 저장하고 RSSI를 반환한다.

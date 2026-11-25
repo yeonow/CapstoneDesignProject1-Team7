@@ -260,8 +260,9 @@ def main():
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument(
         "--target-mode", choices=targets.TARGET_MODES, default=config.TARGET_MODE,
-        help="fixed: one target; random: random target per episode (main experiment); "
-             "split: checkerboard train/eval targets (generalization check).",
+        help="fixed: one target; random: random target per episode, shared train/eval candidates; "
+             "split: random target per episode, checkerboard-separated train/eval candidates "
+             "(paper Random Target condition).",
     )
     parser.add_argument("--target-min-distance", type=int, default=config.TARGET_MIN_DISTANCE)
     parser.add_argument("--noise", action="store_true",

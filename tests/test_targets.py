@@ -37,18 +37,54 @@ def test_candidates_respect_min_distance_and_grid():
     assert len(candidates) == 36 - 9  # max(x,y)<3 인 칸 9개 제외
 
 
-def test_paper_manhattan_candidates_keep_chebyshev_shortest_distance(monkeypatch):
+def test_paper_chebyshev_split_candidates_and_reproducible_choice(monkeypatch):
     for name, value in {"GRID_SIZE": 20, "TARGET_MODE": "split",
-                        "TARGET_MIN_DISTANCE": 5, "TARGET_DISTANCE_METRIC": "manhattan"}.items():
+                        "TARGET_MIN_DISTANCE": 5, "TARGET_DISTANCE_METRIC": "chebyshev"}.items():
         monkeypatch.setattr(config, name, value)
-    train = set(targets.target_candidates("train"))
-    evaluation = set(targets.target_candidates("eval"))
-    assert (len(train | evaluation), len(train), len(evaluation)) == (385, 193, 192)
-    assert not train & evaluation
-    assert all(x + y >= 5 for x, y in train | evaluation)
-    assert (2, 3) in train | evaluation
+    train = targets.target_candidates("train")
+    evaluation = targets.target_candidates("eval")
+    cells = set(train) | set(evaluation)
+    assert (len(cells), len(train), len(evaluation)) == (375, 187, 188)
+    assert not set(train) & set(evaluation)
+    assert cells == set(targets.candidate_targets(20, (0, 0), 5))
+    assert all(targets.shortest_path_steps((0, 0), cell) >= 5 for cell in cells)
+    # 8방향 최단 이동 횟수가 5 미만인 칸은 x+y가 5 이상이어도 후보가 아니다.
     assert targets.shortest_path_steps((0, 0), (2, 3)) == 3
-    assert len(targets.candidate_targets(20, (0, 0), 5)) == 375
+    assert (2, 3) not in cells
+    first_rng, second_rng = targets.training_target_rng(42), targets.training_target_rng(42)
+    assert ([first_rng.choice(train) for _ in range(20)]
+            == [second_rng.choice(train) for _ in range(20)])
+    assert ([targets.evaluation_target(evaluation, 43, e) for e in range(1, 21)]
+            == [targets.evaluation_target(evaluation, 43, e) for e in range(1, 21)])
+
+
+@pytest.mark.parametrize("mode", ["random", "split"])
+def test_manhattan_target_distance_is_rejected(monkeypatch, mode):
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.candidate_targets(20, (0, 0), 5, distance_metric="manhattan")
+    monkeypatch.setattr(config, "TARGET_MODE", mode)
+    monkeypatch.setattr(config, "TARGET_DISTANCE_METRIC", "manhattan")
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.validate_target_config()
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.target_candidates("eval")
+
+
+@pytest.mark.parametrize("mode", ["fixed", "random", "split"])
+@pytest.mark.parametrize("metric", ["manhattan", "euclidean", "CHEBYSHEV", ""])
+def test_invalid_distance_metric_is_rejected_in_every_mode(monkeypatch, mode, metric):
+    monkeypatch.setattr(config, "TARGET_MODE", mode)
+    monkeypatch.setattr(config, "TARGET_DISTANCE_METRIC", metric)
+    with pytest.raises(ValueError, match="Chebyshev"):
+        targets.validate_target_config()
+
+
+def test_fixed_mode_with_chebyshev_keeps_its_single_target():
+    assert config.TARGET_DISTANCE_METRIC == "chebyshev"
+    assert targets.validate_target_config() == "fixed"
+    assert targets.target_candidates("train") is None and targets.target_candidates("eval") is None
+    results = comparison.evaluate_random_agent(3, seed=1)
+    assert {(row["target_x"], row["target_y"]) for row in results} == {config.TARGET_POSITION}
 
 
 @pytest.mark.parametrize("start,target,expected", [
