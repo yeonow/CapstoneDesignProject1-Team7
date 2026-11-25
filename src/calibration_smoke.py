@@ -52,8 +52,9 @@ def run_smoke(profile_path, output_dir, train_episodes=10, eval_episodes=10):
                 "noise_seed_rule": "<eval_seed>:<episode>", "settings": {}, "probes": {}}
     results = {}
     # 논문용 8방향 Split 선택 함수를 그대로 호출하며 파일/함수/Seed 규칙을 바꾸지 않는다.
+    # Target 후보 필터만 최종 논문 기준인 Chebyshev이며, RSSI 감쇠는 환경의 Euclidean 거리를 쓴다.
     common = dict(GRID_SIZE=20, AGENT_START=(0, 0), TARGET_POSITION=(19, 19), MAX_STEPS=400,
-                  TARGET_MODE="split", TARGET_MIN_DISTANCE=5, TARGET_DISTANCE_METRIC="manhattan",
+                  TARGET_MODE="split", TARGET_MIN_DISTANCE=5, TARGET_DISTANCE_METRIC="chebyshev",
                   CHANNEL_STATE="los", CELL_SIZE_M=1.0, MIN_DISTANCE_M=1.0,
                   NOISE_FLOOR_DBM=profile["noise_floor_dbm"], NOISE_STD=2.0,
                   RSSI_CALIBRATION_FILE=profile_path)

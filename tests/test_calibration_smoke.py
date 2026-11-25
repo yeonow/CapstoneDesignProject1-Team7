@@ -4,7 +4,7 @@ import random
 import pytest
 
 import config
-from src.calibration_data import EXPECTED_HASHES
+from src.calibration_data import DATA, EXPECTED_HASHES
 from src.calibration_smoke import run_smoke, temporary_settings, paired_targets
 from src.environment import RSSIGridEnv
 
@@ -32,6 +32,16 @@ def test_paired_smoke_repeats_and_uses_calibrated_learning(tmp_path, monkeypatch
     assert first["paired_targets_and_seeds_verified"]
     with pytest.raises(FileExistsError):
         run_smoke(path, tmp_path / "first", 1, 2)
+
+
+def test_smoke_uses_paper_chebyshev_target_distance(tmp_path):
+    manifest = run_smoke(DATA / "calibration_profile.json", tmp_path / "smoke", 1, 1)
+    for mode in ("baseline", "calibrated"):
+        settings = manifest["settings"][mode]
+        assert settings["RSSI_MODEL"] == mode
+        assert (settings["GRID_SIZE"], settings["AGENT_START"], settings["TARGET_MODE"],
+                settings["TARGET_MIN_DISTANCE"], settings["TARGET_DISTANCE_METRIC"]) == (
+                    20, (0, 0), "split", 5, "chebyshev")
 
 
 def test_settings_restore_on_failure():
