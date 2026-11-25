@@ -20,3 +20,8 @@ Original files copied byte-for-byte to data/rssi_calibration_20261125; SHA-256 c
 No calibration parameters are decided yet. Do not infer spatial shadow variance from temporal repeats.
 Resume from this Worktree; inspect git log and this file before changing any source.
 Each completed unit must pass relevant tests and be committed separately.
+# Data validation checkpoint
+
+- Baseline full suite: 357 passed. Loader commit: b8e7124.
+- Added exact sample coverage, strict subset, movement ordering and selected audit reconciliation.
+- Original bytes are immutable; SHA mismatch stops analysis. No low-quality sample is silently removed.

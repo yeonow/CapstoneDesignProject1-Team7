@@ -58,3 +58,49 @@ def read_measurements(path, scenario=1):
     if not rows:
         raise ValueError("Empty measurement CSV")
     return rows
+
+
+def validate_dataset(directory=DATA):
+    """최종 90개, strict 89개, 이동 24개와 감사 기록을 원본 그대로 대조한다."""
+    from experiments.field_measurement.analysis.trend import ordered_legs
+
+    directory = Path(directory)
+    hashes = source_hashes(directory)
+    if hashes != EXPECTED_HASHES:
+        raise ValueError("Source SHA-256 mismatch")
+    primary = read_measurements(directory / "scenario1_provisional.csv")
+    strict = read_measurements(directory / "scenario1_strict_provisional.csv")
+    motion = read_measurements(directory / "scenario2.csv", 2)
+    expected = {(d, n) for d in DISTANCES for n in range(1, 16)}
+    keys = [(r["distance_m"], r["sample_no"]) for r in primary]
+    if len(keys) != 90 or set(keys) != expected:
+        raise ValueError("Expected 15 unique samples at each distance")
+    identity = lambda r: (r["distance_m"], r["sample_no"], r["rssi_dbm"])
+    primary_set, strict_set = set(map(identity, primary)), set(map(identity, strict))
+    if len(strict) != 89 or len(strict_set) != 89 or not strict_set < primary_set:
+        raise ValueError("Strict data must exclude exactly one unchanged primary sample")
+    legs = list(ordered_legs(motion))  # 기존 순서/중복/구간 검증 재사용
+    with (directory / "measurement_audit.csv").open(encoding="utf-8-sig", newline="") as file:
+        audit = list(csv.DictReader(file))
+    selected = [r for r in audit if r["selected"] == "1"]
+    def audit_identity(row):
+        if row["scenario"] == "1":
+            return (1, float(row["distance_m"]), int(row["sample_no"]), float(row["rssi_dbm"]))
+        return (2, int(row["repeat"]), row["direction"], int(row["measurement_order"]),
+                float(row["distance_m"]), float(row["rssi_dbm"]))
+    observed = [audit_identity(r) for r in selected]
+    expected_selected = {(1, *identity(r)) for r in primary} | {
+        (2, r["repeat"], r["direction"], r["measurement_order"], r["distance_m"], r["rssi_dbm"])
+        for r in motion}
+    if len(observed) != 114 or set(observed) != expected_selected:
+        raise ValueError("Selected audit rows disagree with measurements")
+    excluded = list(primary_set - strict_set)
+    low_quality = [r for r in selected if r["status"] != "ok"]
+    if len(low_quality) != 1 or audit_identity(low_quality[0]) != (1, *excluded[0]):
+        raise ValueError("Strict exclusion must match selected low-quality audit row")
+    return {"hashes": hashes, "primary_count": len(primary), "strict_count": len(strict),
+            "motion_count": len(motion), "transition_count": sum(len(v) - 1 for _, _, v in legs),
+            "audit_count": len(audit), "selected_count": len(selected),
+            "excluded_from_strict": excluded, "selected_quality_warnings": low_quality,
+            "frequency_mhz": sorted({float(r["frequency_mhz"]) for r in selected}),
+            "policy": "Final 90 including 15 m; strict 89 sensitivity only; scenario2 trend only"}
