@@ -101,6 +101,11 @@ MULTIPATH_FADING = 1.0          # nu: 현재 고정 진폭 계수, 1이면 추�
 NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(dB)
 CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
 
+# 기존 논문 모드는 기본값으로 보존한다. 보정 사용 시 분석에서 저장한 JSON을 명시한다.
+# 실측 반복 SD를 공간적 shadow fading으로 대체하지 않으므로 NOISE_STD는 그대로 유지한다.
+RSSI_MODEL = "baseline"          # "baseline" 또는 "calibrated"
+RSSI_CALIBRATION_FILE = None
+
 
 # =========================
 # Experiment Parameters

@@ -36,3 +36,9 @@ Each completed unit must pass relevant tests and be committed separately.
 - Fit commit 86d9c13: 3 tests passed, including known-curve recovery.
 - Optional aggregate reference adds a constant offset to equation (2); baseline arithmetic and equation (1) remain unchanged.
 - Movement, state/reward, seeds and target selection unchanged. No NLoS transfer inferred from LoS data.
+
+## Factory checkpoint
+- Environment commit 0fd213c: 24 baseline/calibrated tests passed.
+- Explicit RSSI_MODEL=calibrated plus RSSI_CALIBRATION_FILE loads validated source-bound JSON.
+- Both existing Q-Learning and Random factory calls use this setting; no learning code changed.
+- LoS, 1m clamp and fitted noise-floor assumptions are checked; default remains baseline.

@@ -11,20 +11,33 @@ from src.environment import RSSIGridEnv
 
 def build_environment(noise_std=None):
     """config 설정과 선택적 Noise override로 환경을 생성한다."""
+    mode = getattr(config, "RSSI_MODEL", "baseline")
+    calibrated = {}
+    if mode == "calibrated":
+        from src.calibration_profile import load_profile
+        profile = load_profile(config.RSSI_CALIBRATION_FILE)
+        if config.CHANNEL_STATE != "los" or config.NOISE_FLOOR_DBM != profile["noise_floor_dbm"]:
+            raise ValueError("Calibration requires its fitted noise floor and LoS")
+        if config.MIN_DISTANCE_M != 1.0:
+            raise ValueError("Calibration requires the measured 1m lower distance bound")
+        calibrated = {"calibrated_reference_rx_power_dbm": profile["reference_rx_power_dbm"]}
+    elif mode != "baseline":
+        raise ValueError("RSSI_MODEL must be baseline or calibrated")
     return RSSIGridEnv(
         grid_size=config.GRID_SIZE,
         max_steps=config.MAX_STEPS,
         agent_start=config.AGENT_START,
         target_position=config.TARGET_POSITION,
         cell_size_m=config.CELL_SIZE_M,
-        carrier_frequency_hz=config.CARRIER_FREQUENCY_HZ,
+        carrier_frequency_hz=profile["carrier_frequency_hz"] if calibrated else config.CARRIER_FREQUENCY_HZ,
         tx_power_dbm=config.TX_POWER_DBM,
         eta_los=config.ETA_LOS,
         eta_nlos=config.ETA_NLOS,
-        path_loss_exponent=config.PATH_LOSS_EXPONENT,
+        path_loss_exponent=profile["path_loss_exponent"] if calibrated else config.PATH_LOSS_EXPONENT,
         multipath_fading=config.MULTIPATH_FADING,
         noise_std=config.NOISE_STD if noise_std is None else noise_std,
         min_distance_m=config.MIN_DISTANCE_M,
         noise_floor_dbm=config.NOISE_FLOOR_DBM,
         channel_state=config.CHANNEL_STATE,
+        **calibrated,
     )

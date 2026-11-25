@@ -6,6 +6,39 @@ import pytest
 from src.env_factory import build_environment
 
 
+def test_factory_selects_profile_without_changing_baseline(tmp_path, monkeypatch):
+    import config
+    import json
+    from src.calibration_data import EXPECTED_HASHES
+    profile = dict(schema_version=1, source_sha256=EXPECTED_HASHES, reference_distance_m=1,
+                   channel_state="los", reference_rx_power_dbm=-55, path_loss_exponent=2.4,
+                   carrier_frequency_hz=2452e6, noise_floor_dbm=-90)
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setattr(config, "RSSI_CALIBRATION_FILE", path)
+    baseline = build_environment(noise_std=0)
+    monkeypatch.setattr(config, "RSSI_MODEL", "calibrated")
+    calibrated = build_environment(noise_std=0)
+    assert calibrated.path_loss_exponent == 2.4
+    assert calibrated.carrier_frequency_hz == 2452e6
+    assert baseline.calibrated_reference_rx_power_dbm is None
+    assert baseline.path_loss_exponent == config.PATH_LOSS_EXPONENT
+    calibrated.reset(target_position=(1, 0))
+    assert calibrated.current_rx_power == pytest.approx(-55)
+    monkeypatch.setattr(config, "NOISE_FLOOR_DBM", -80)
+    with pytest.raises(ValueError, match="noise floor"):
+        build_environment()
+
+
+@pytest.mark.parametrize("mode", ["typo", "calibrated"])
+def test_bad_or_missing_mode_settings_fail(monkeypatch, mode):
+    import config
+    monkeypatch.setattr(config, "RSSI_MODEL", mode)
+    monkeypatch.setattr(config, "RSSI_CALIBRATION_FILE", None)
+    with pytest.raises(ValueError):
+        build_environment()
+
+
 def test_calibrated_reference_and_cached_single_noise_sample():
     env = build_environment(noise_std=2)
     env.calibrated_reference_rx_power_dbm = -55.0
