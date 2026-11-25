@@ -42,3 +42,8 @@ Each completed unit must pass relevant tests and be committed separately.
 - Explicit RSSI_MODEL=calibrated plus RSSI_CALIBRATION_FILE loads validated source-bound JSON.
 - Both existing Q-Learning and Random factory calls use this setting; no learning code changed.
 - LoS, 1m clamp and fitted noise-floor assumptions are checked; default remains baseline.
+
+## Trend checkpoint
+- Factory commit 4468203: 27 tests passed.
+- Reuses existing ordered legs/transitions; 20 differences, 2 repeats, approach/away summaries.
+- Explores 0/1/2/3/4 dB descriptively; keeps existing 2 dB without tuning State/Reward.
