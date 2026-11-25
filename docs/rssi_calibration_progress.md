@@ -53,3 +53,10 @@ Each completed unit must pass relevant tests and be committed separately.
 - Added read-only-source analysis command, before/after curves, strict sensitivity, trend CSVs and runtime profile.
 - All outputs require a new directory; 20m explicitly unobserved/extrapolated. Seeded simulated SD is separate from measured repeat SD.
 - Remaining: actual analysis, paired smoke, full suite, preservation check and push.
+
+## Smoke checkpoint
+- Analysis commit 647c509: actual-data output and overwrite protection test passed.
+- Actual 90-point fit: reference P_rx=-60.27895489260387 dBm, n=1.583968492442464.
+- In-sample RSSI RMSE: baseline 15.36524060741104 dB, calibrated 4.4520562119044556 dB.
+- Trend at 2 dB: 7/20 correct (35%); no threshold tuning.
+- Added paired 1-run smoke wrapper with try/finally config restoration and metadata; no change to engine or seed rules.
