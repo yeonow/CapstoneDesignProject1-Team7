@@ -25,3 +25,9 @@ Each completed unit must pass relevant tests and be committed separately.
 - Baseline full suite: 357 passed. Loader commit: b8e7124.
 - Added exact sample coverage, strict subset, movement ordering and selected audit reconciliation.
 - Original bytes are immutable; SHA mismatch stops analysis. No low-quality sample is silently removed.
+
+## Fit checkpoint
+- Audit reconciliation committed as d1fc3d0 (8 tests passed).
+- Reused existing distance_statistics/path_loss; added RSSI-space fit through equation (1).
+- Fits aggregate P_rx at 1m and exponent with assumed noise floor -90 dBm; retains direct RSSI fit for comparison.
+- Within-distance repeat SD is descriptive, not a spatial shadow-fading estimate. Runtime noise stays 2 dB.
