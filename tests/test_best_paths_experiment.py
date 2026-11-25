@@ -3,6 +3,8 @@
 import csv
 import json
 import random
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -25,6 +27,49 @@ def test_paper_settings_restore_on_exception():
             assert len(paper.targets.target_candidates("eval")) == 188
             raise RuntimeError("interrupted")
     assert vars(config) == previous
+
+
+def test_default_output_is_separate_from_past_manhattan_results():
+    assert paper.DEFAULT_OUTPUT == Path("results/best_paths_8dir/chebyshev_target/grid_20x20")
+    assert paper.DEFAULT_OUTPUT != Path("results/best_paths_8dir/random_target/grid_20x20")
+
+
+@pytest.mark.parametrize("cli", [False, True])
+def test_existing_output_is_refused_before_training(monkeypatch, tmp_path, cli):
+    output = tmp_path / "existing"
+    output.mkdir()
+    (output / "past.json").write_text("past result", encoding="utf-8")
+
+    def must_not_train(**kwargs):
+        raise AssertionError("training must not start for an existing output")
+
+    monkeypatch.setattr(paper, "compare_algorithms", must_not_train)
+    previous = vars(config).copy()
+    with pytest.raises(FileExistsError, match="already exists"):
+        if cli:
+            monkeypatch.setattr(sys, "argv", ["best_paths_experiment", "--train-episodes", "1",
+                                              "--eval-episodes", "1", "--runs", "1",
+                                              "--output-dir", str(output)])
+            paper.main()
+        else:
+            paper.run_best_path_experiment(train_episodes=1, eval_episodes=1, runs=1,
+                                           output_dir=output)
+    assert [path.name for path in output.iterdir()] == ["past.json"]
+    assert (output / "past.json").read_text(encoding="utf-8") == "past result"
+    assert vars(config) == previous
+
+
+def test_new_output_is_saved_and_cannot_be_overwritten(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "LOG_INTERVAL", 0)
+    output = tmp_path / "chebyshev_target" / "grid_20x20"
+    kwargs = dict(train_episodes=1, eval_episodes=2, runs=1, seed=42, output_dir=output)
+    paper.run_best_path_experiment(**kwargs)
+    saved = {path.name: path.read_bytes() for path in output.iterdir()}
+    assert {"q_learning_best.json", "random_search_best.json", "experiment_summary.csv",
+            "algorithm_comparison_episodes.csv", "best_path_comparison.pdf"} <= set(saved)
+    with pytest.raises(FileExistsError):
+        paper.run_best_path_experiment(**kwargs)
+    assert {path.name: path.read_bytes() for path in output.iterdir()} == saved
 
 
 def test_actual_paired_evaluations_artifacts_and_rng_integrity(monkeypatch, tmp_path):
