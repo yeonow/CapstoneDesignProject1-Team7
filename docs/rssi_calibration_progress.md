@@ -12,6 +12,8 @@ Original files copied byte-for-byte to data/rssi_calibration_20261125; SHA-256 c
 - 데이터 검증, 감사 대조, 피팅/민감도, Trend, 환경 선택 및 실제 소규모 smoke 완료.
 - 최종 테스트와 변경 범위 검토 완료. 새 브랜치의 원격 푸시도 성공했다.
 - 아래 checkpoint는 개발 이력이다. 최종 수치/한계/실행 방법은 문서 후반을 따른다.
+- 후속 작업: smoke의 Target 후보 거리를 최종 논문 기준인 Chebyshev로 정정했다.
+  Manhattan으로 기록된 smoke 내용은 정정 전 이력이며, 현재 결과는 "Chebyshev Target 기준 정정" 절을 따른다.
 
 Do not infer spatial shadow variance from temporal repeats.
 Resume from this Worktree; inspect git log and this file before changing any source.
@@ -134,6 +136,9 @@ scenario2의 절대 RSSI가 scenario1과 다르므로 거리 피팅에 합치지
 
 ### 실제 Smoke 결과
 
+> 정정 전 기록: 아래는 Manhattan 최소거리 조건으로 실행한 과거 smoke이며 수치를 그대로 보존한다.
+> 현재 설정(Chebyshev)의 결과는 "Chebyshev Target 기준 정정" 절에 별도로 기록했다.
+
 양 모드 각각 새 Q-Table, 10회 학습/알고리즘당 10회 평가, 1 Run(42/43)만 실행했다.
 20x20, (0,0), 400 Step, 8방향, LoS, 1m/cell, noise_std=2,
 Manhattan 최소거리 5의 기존 2x2 split이다.
@@ -149,6 +154,59 @@ Manhattan 최소거리 5의 기존 2x2 split이다.
 통합 동작 확인용이며 보정으로 탐색 성능이 향상됐다는 결론을 내리지 않는다.
 State/Reward, 학습률, 할인율, epsilon 감소, Target 함수와 Seed 규칙은 바꾸지 않았다.
 
+## Chebyshev Target 기준 정정 (후속 작업)
+
+최종 논문의 Target 후보 조건은 시작점 (0,0)에서 **Chebyshev 거리 ≥ 5**다.
+smoke에 `TARGET_DISTANCE_METRIC="manhattan"`이 남아 있어 `src/calibration_smoke.py`의 이 값만
+`"chebyshev"`로 바꿨다. `src/targets.py`의 거리 함수, 2x2 체커보드 분할, Target RNG/Seed 규칙,
+다른 실험의 Manhattan 설정은 변경하지 않았다.
+Target 후보 선정에는 Chebyshev 거리를 쓰고, RSSI 거리 감쇠에는 기존과 같이 Agent–Target Euclidean 거리를 쓴다.
+
+### Target 분할 검증 (20x20, split)
+
+| 거리 기준 | 전체 후보 | 학습 | 평가 | 최소 Chebyshev |
+|---|---:|---:|---:|---:|
+| Chebyshev ≥ 5 (현재) | 375 | 187 | 188 | 5 |
+| Manhattan ≥ 5 (정정 전 smoke) | 385 | 193 | 192 | 3 |
+
+Chebyshev 기준에서는 시작점 주변 5x5(25칸)만 제외된다. 학습/평가 중복 없음, 동일 Seed 재현,
+Q-Learning·Random 및 Baseline·Calibrated의 평가 Target/Seed 동일성을
+`tests/test_calibration_targets.py`에 테스트로 고정했다.
+
+### 실측 범위와 외삽 구간
+
+| 거리 구간 | 근거 | 해석 |
+|---|---|---|
+| 1m 미만 | 1m clamp | 1m 값을 사용, 근거리는 측정하지 않음 |
+| 1–15m | 실측 90개 피팅 | 관측 범위 안의 회귀값 (in-sample) |
+| 15m 초과–약 26.9m | 같은 회귀식 외삽 | 관측 없는 예측값, 20x20 대각 (19,19)까지 |
+
+20m는 핫스팟 연결 단절로 측정하지 못했다. 기존 회귀식을 다시 피팅하지 않고 계산한 20m noise-free 예측은
+P_rx -80.887 dBm, RSSI -80.384 dBm이다(Baseline RSSI -69.048 dBm). **측정값이 아닌 외삽값**이며
+분석 CSV에도 20m는 `observed=False`, 측정 평균/SD 없음으로 기록된다. 20m와 (19,19)에서 2 dB Noise를
+포함해도 값은 유한하다(`tests/test_calibration_extrapolation.py`).
+단절/관측 불가 확률은 구현하지 않았으므로 이 외삽값은 해당 거리에서 실제로 신호를 수신할 수 있다는
+근거가 아니다. 15m 초과 구간의 감쇠가 실측 구간과 같다는 가정 자체를 검증하지 않았다.
+
+### Chebyshev smoke 재실행 결과
+
+정정 전 smoke와 조건이 같고(20x20, (0,0), split, 8방향, 400 Step, LoS, 1m/cell, noise_std=2,
+1 Run 42/43, 양 모드 각각 새 Q-Table로 학습 10/평가 10) Target 거리 기준만 Chebyshev다.
+출력: `results/rssi_calibration_chebyshev_20261125/smoke/`. 기존 `results/rssi_calibration_20261125/`는 덮어쓰지 않았다.
+네 조합(2 모델 × 2 알고리즘)의 평가 Target/Seed 10개가 모두 같고, 모두 평가 집합이며
+Chebyshev ≥ 5다(실제 최소 6).
+
+| 모델 | 알고리즘 | 성공 수 | 전체 평균 종료 Step |
+|---|---|---:|---:|
+| Baseline | Q-Learning | 4/10 | 264.5 |
+| Baseline | Random | 1/10 | 398.7 |
+| Calibrated | Q-Learning | 8/10 | 184.3 |
+| Calibrated | Random | 1/10 | 398.7 |
+
+후보 목록이 바뀌어 같은 Seed라도 평가 Target이 정정 전과 다르므로 정정 전 표와 직접 비교하지 않는다.
+Random은 RSSI를 행동 선택에 쓰지 않으므로 두 모델에서 결과가 같다.
+1 Run/10 Episode의 동작 확인이며 성능 결론이 아니다. 결과에 따라 알고리즘/파라미터를 조정하지 않았다.
+
 ## 실행 방법
 
 분석 의존성은 기존 `experiments/field_measurement/analysis/requirements.txt`를 재사용한다.
@@ -161,7 +219,10 @@ python -m src.calibration_smoke --profile data/rssi_calibration_20261125/calibra
 python -m pytest -q -p no:cacheprovider
 ```
 
-실제 이번 실행의 경로는 `results/rssi_calibration_20261125/`다:
+smoke 명령은 현재 Chebyshev 후보 기준으로 실행된다. 정정 후 실행 결과는
+`results/rssi_calibration_chebyshev_20261125/smoke/`에 있고 구성은 아래 `smoke/`와 같다.
+
+최초 실행의 경로는 `results/rssi_calibration_20261125/`다(`smoke/`는 정정 전 Manhattan 결과):
 
 - `analysis/profile.json`, `report.json`: 출처 해시/품질, 피팅/strict/Trend 결과.
 - `analysis/distance_statistics.csv`, `model_comparison.csv`: 실측 평균/SD, noise-free 예측,
@@ -214,3 +275,7 @@ Target/Seed 규칙 및 기존 results 파일은 diff가 없다.
 이 완료 기록을 별도 문서 커밋으로 추가한다. PR 생성과 main 병합은 하지 않았다.
 요청 범위의 구현/검증은 완료됐다. 로컬 결과는 위 경로에서 확인하고 후속 연구는 별도 범위로 진행한다.
 100 Run, 모든 Noise 조건 연구, 단절 모델/다른 지역 일반화는 이번 범위 밖이다.
+
+후속 Chebyshev 정정은 e603ef2 이후 4852194 smoke 거리 기준 → 8bc4c88 Target 분할 테스트 →
+6cc1f04 20m 외삽 테스트 → 이 문서 커밋 순서로 저장했다. 작업 전 전체 379개, 이후 **389 passed**다.
+회귀 파라미터, 보정 프로필, 원본 CSV, RSSI 수식/Noise/State/Reward, Target/Seed 함수는 변경하지 않았다.
