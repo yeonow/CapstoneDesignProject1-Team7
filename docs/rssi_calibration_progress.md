@@ -31,3 +31,8 @@ Each completed unit must pass relevant tests and be committed separately.
 - Reused existing distance_statistics/path_loss; added RSSI-space fit through equation (1).
 - Fits aggregate P_rx at 1m and exponent with assumed noise floor -90 dBm; retains direct RSSI fit for comparison.
 - Within-distance repeat SD is descriptive, not a spatial shadow-fading estimate. Runtime noise stays 2 dB.
+
+## Environment checkpoint
+- Fit commit 86d9c13: 3 tests passed, including known-curve recovery.
+- Optional aggregate reference adds a constant offset to equation (2); baseline arithmetic and equation (1) remain unchanged.
+- Movement, state/reward, seeds and target selection unchanged. No NLoS transfer inferred from LoS data.
