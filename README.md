@@ -14,10 +14,11 @@ Run당 Q-Learning 1,000 Episode 학습 및 100 Episode 평가, 30 Runs, 최대 4
 Gaussian Noise 표준편차 2 dB를 사용합니다. 각 Run에서 새 정책을 학습하고 greedy 평가합니다.
 기존 Random Search의 8방향 균등 무작위 행동은 유지합니다.
 
-Target 후보에는 **맨해튼 거리 ≥ 5**를 적용하여 385개를 만들고 2×2 블록 체커보드로
-학습 193개/평가 192개로 나눕니다. 경로 최단 Step은 **체비쇼프 거리**입니다.
-기존 실험은 `TARGET_DISTANCE_METRIC = "chebyshev"` 기본값을 유지하며 전용 모듈이 실행 중에만
-`manhattan`으로 바꿉니다. `fixed`, 코드의 `random`, 10×10 실험은 이 모듈에서 실행하지 않습니다.
+Target 후보에는 시작점 기준 **체비쇼프 거리 ≥ 5**를 적용하여 375개를 만들고 2×2 블록 체커보드로
+학습 187개/평가 188개로 나눕니다. 경로 최단 Step도 같은 **체비쇼프 거리**이며,
+RSSI 전파 감쇠는 Agent–Target 사이의 **Euclidean 거리**로 계산합니다.
+모든 8방향 실험은 `TARGET_DISTANCE_METRIC = "chebyshev"`만 지원하며 `manhattan`을 지정하면 오류로 중단합니다.
+`fixed`, 코드의 `random`, 10×10 실험은 이 모듈에서 실행하지 않습니다.
 
 기본 Seed는 42이고 Run r의 Train Seed는 `42 + 2*(r-1)`, Eval Seed는 `train_seed + 1`입니다.
 평가 Target은 `target:<eval_seed>:<episode>`, Noise는 `<eval_seed>:<episode>`로 정하므로
@@ -28,6 +29,9 @@ Target 후보에는 **맨해튼 거리 ≥ 5**를 적용하여 385개를 만들�
 두 경로의 Target은 다를 수 있으므로 경로 길이를 동일 Target의 성능 비교로 해석하면 안 됩니다.
 
 결과는 `results/best_paths_8dir/random_target/grid_20x20/`에 저장합니다.
+현재 저장소의 이 폴더 파일은 Target 후보를 맨해튼 거리 기준(385/193/192)으로 선정했던 **과거 실행 결과**이며
+(`target_distance_metric: manhattan`), 체비쇼프 기준으로 다시 실행하지 않았습니다.
+기본 명령을 다시 실행하면 이 파일들이 갱신되므로 과거 결과를 보존하려면 `--output-dir`로 새 폴더를 지정합니다.
 
 - `q_learning_best.png`, `random_search_best.png`
 - `best_path_comparison.png`, `best_path_comparison.pdf`
