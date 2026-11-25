@@ -28,3 +28,12 @@ def test_invalid_noise_floor_is_not_silently_fitted():
     rows = read_measurements(DATA / "scenario1_provisional.csv")
     with pytest.raises(ValueError):
         fit_measurements(rows, -40)
+
+
+def test_published_profile_reproduces_final_measurement_fit():
+    from src.calibration_profile import load_profile
+    profile = load_profile(DATA / "calibration_profile.json")
+    fitted = fit_measurements(read_measurements(DATA / "scenario1_provisional.csv"),
+                              profile["noise_floor_dbm"])
+    for key in ("reference_rx_power_dbm", "path_loss_exponent"):
+        assert profile[key] == pytest.approx(fitted[key], abs=1e-8)

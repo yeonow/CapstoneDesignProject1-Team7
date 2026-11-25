@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_sha256": {
+    "scenario1_provisional.csv": "1d869a86bae7da19feadd2afa4bb9039f5e47b2a279023c3a75ff38d30e40844",
+    "scenario1_strict_provisional.csv": "beecdf1aba68311218e980c6d1bb0099b7f41b79f4825ebfd36f48f92bdeba95",
+    "scenario2.csv": "db40a41ce0af3002543cb20134b85085dd2f9ea6f6494618352fe898bb0d47aa",
+    "measurement_audit.csv": "c5c76d2425db3b0c0bd53db71707d1879122d9d01e66a66e197e7103322bdb33"
+  },
+  "reference_rx_power_dbm": -60.27895489260387,
+  "path_loss_exponent": 1.583968492442464,
+  "reference_distance_m": 1.0,
+  "noise_floor_dbm": -90.0,
+  "carrier_frequency_hz": 2452000000.0,
+  "channel_state": "los",
+  "measurement_range_m": [
+    1,
+    15
+  ],
+  "noise_policy": "Keep existing 2 dB assumption, not inferred spatial shadow variance",
+  "limitations": "Conditional on noise floor; repeated medians, not independent spatial fading. Aggregate reference does not identify tx power, eta or multipath separately. Valid observations 1-15m; 20m disconnected and unobserved. IID confidence interval in direct fit is descriptive only."
+}

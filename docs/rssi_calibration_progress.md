@@ -60,3 +60,10 @@ Each completed unit must pass relevant tests and be committed separately.
 - In-sample RSSI RMSE: baseline 15.36524060741104 dB, calibrated 4.4520562119044556 dB.
 - Trend at 2 dB: 7/20 correct (35%); no threshold tuning.
 - Added paired 1-run smoke wrapper with try/finally config restoration and metadata; no change to engine or seed rules.
+
+## Measured profile checkpoint
+- Smoke commit 7f2b34e: 3 tests passed; full suite afterward: 378 passed.
+- Actual smoke: each mode 10 train / 10 eval, one run 42/43, 20x20 / 400 steps / Manhattan split.
+- Baseline Q/Random: 1/10 and 6/10 successes; calibrated Q/Random: 2/10 and 6/10. These are debugging outcomes, not performance evidence.
+- Saved the actual generated profile under data/rssi_calibration_20261125/calibration_profile.json; test recomputes it from the final 90 samples.
+- Original worktree still has exactly 29 deletions and 3 untracked files; all three recorded SHA-256 hashes unchanged.
