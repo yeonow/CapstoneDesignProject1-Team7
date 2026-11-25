@@ -129,6 +129,17 @@ Best는 성공 Episode 중 `(Path Ratio, Steps, Run, Episode)` 순으로 선정�
 Run마다 성공 수가 다르면 전체 성공 Episode의 비율 평균은 기존 Grid 요약 CSV의 Run별 비율 평균을 다시 평균 낸 값과 다를 수 있습니다. 경로 선정에도 Episode 전체 평균을 사용합니다. `--no-plot`은 기존 Grid 비교 그래프만 생략하므로 `--plot-paths`와 함께 사용할 수 있습니다.
 
 검증: `python -m pytest -q -p no:cacheprovider`
+## 실측 보정 RSSI Level 조정 (종프 최종 발표용 추가 개선)
+
+제출한 논문 결과(Baseline + 기존 Level `[-80, -70, -60, -50]` dBm)는 바꾸지 않습니다.
+Baseline + 기존 Level, Calibrated + 기존 Level, Calibrated + 조정 Level을 같은 Seed로 비교합니다.
+
+```powershell
+python -m src.rssi_level_experiment --output results/<새 폴더>
+```
+
+조정 경계 계산, 설정 방법, 재현 결과와 한계는 [RSSI Level 조정 안내](docs/rssi_level_adjustment.md)를 참고하세요.
+
 ## 실험 CSV 검증과 그래프 재생성
 
 학습을 다시 실행하지 않고 기존 CSV를 검증해 그래프를 만들 수 있습니다.
