@@ -47,3 +47,9 @@ Each completed unit must pass relevant tests and be committed separately.
 - Factory commit 4468203: 27 tests passed.
 - Reuses existing ordered legs/transitions; 20 differences, 2 repeats, approach/away summaries.
 - Explores 0/1/2/3/4 dB descriptively; keeps existing 2 dB without tuning State/Reward.
+
+## Analysis checkpoint
+- Trend commit 4b97cdf: transition and existing-threshold agreement test passed.
+- Added read-only-source analysis command, before/after curves, strict sensitivity, trend CSVs and runtime profile.
+- All outputs require a new directory; 20m explicitly unobserved/extrapolated. Seeded simulated SD is separate from measured repeat SD.
+- Remaining: actual analysis, paired smoke, full suite, preservation check and push.
