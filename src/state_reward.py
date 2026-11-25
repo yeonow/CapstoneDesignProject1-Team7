@@ -59,17 +59,22 @@ def get_representative_rssi(samples):
 # ---------------------------------------------------------------
 # 2) RSSI Level
 # ---------------------------------------------------------------
-RSSI_LEVEL_MODES = ("original",)
+RSSI_LEVEL_MODES = ("original", "calibrated_adjusted")
 
 
 def rssi_thresholds():
     """현재 RSSI_LEVEL_MODE의 Level 경계. 학습과 평가가 같은 경계를 쓰도록 State 생성 시마다 조회한다.
 
     "original": RSSI_THRESHOLDS를 그대로 사용한다(기본값, 기존 동작).
+    "calibrated_adjusted": RSSI_MODEL="calibrated" 전용. 기존 경계를 두 모델의 1m/15m
+        noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py).
     """
     mode = _cfg("RSSI_LEVEL_MODE")
     if mode == "original":
         return _cfg("RSSI_THRESHOLDS")
+    if mode == "calibrated_adjusted":
+        from src.rssi_levels import calibrated_adjusted_thresholds
+        return calibrated_adjusted_thresholds()
     raise ValueError(f"RSSI_LEVEL_MODE must be one of {RSSI_LEVEL_MODES}: {mode!r}")
 
 

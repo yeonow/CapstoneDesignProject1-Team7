@@ -106,6 +106,8 @@ NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(
 # RSSI Level 경계(dBm). Baseline과 제출 논문 결과에 쓴 기존 경계다.
 RSSI_THRESHOLDS = [-80.0, -70.0, -60.0, -50.0]
 # Level 경계 선택 (src/state_reward.rssi_thresholds). "original": RSSI_THRESHOLDS를 그대로 사용
+# "calibrated_adjusted": RSSI_MODEL="calibrated" 전용. 기존 경계를 Baseline/Calibrated의
+#   1m·15m noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py). 종프 최종 발표용 추가 개선.
 RSSI_LEVEL_MODE = "original"
 CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
 
