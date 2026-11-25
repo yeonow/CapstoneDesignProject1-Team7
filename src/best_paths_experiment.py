@@ -18,6 +18,10 @@ from src.plot_paths import plot_best_paths
 
 # random_target/에는 과거 Manhattan 후보 조건의 결과가 있으므로 Chebyshev 결과는 별도 폴더에 저장한다.
 DEFAULT_OUTPUT = Path("results/best_paths_8dir/chebyshev_target/grid_20x20")
+# 최종 논문 조건. 함수 기본 인자와 CLI 기본값이 같은 상수를 사용한다.
+DEFAULT_TRAIN_EPISODES = 3000
+DEFAULT_EVAL_EPISODES = 100
+DEFAULT_RUNS = 100
 
 
 def validate_best_path(record):
@@ -127,7 +131,8 @@ def paper_config():
             setattr(config, name, value)
 
 
-def run_best_path_experiment(*, train_episodes=1000, eval_episodes=100, runs=30,
+def run_best_path_experiment(*, train_episodes=DEFAULT_TRAIN_EPISODES,
+                             eval_episodes=DEFAULT_EVAL_EPISODES, runs=DEFAULT_RUNS,
                              seed=None, output_dir=DEFAULT_OUTPUT):
     """Retrain each run and record only actual greedy/random evaluation paths.
 
@@ -156,9 +161,9 @@ def run_best_path_experiment(*, train_episodes=1000, eval_episodes=100, runs=30,
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-episodes", type=int, default=1000)
-    parser.add_argument("--eval-episodes", type=int, default=100)
-    parser.add_argument("--runs", type=int, default=30)
+    parser.add_argument("--train-episodes", type=int, default=DEFAULT_TRAIN_EPISODES)
+    parser.add_argument("--eval-episodes", type=int, default=DEFAULT_EVAL_EPISODES)
+    parser.add_argument("--runs", type=int, default=DEFAULT_RUNS)
     parser.add_argument("--seed", type=int, default=config.RANDOM_SEED)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
