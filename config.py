@@ -46,7 +46,7 @@ MAX_STEPS = 100
 # "split": 2×2 블록 체커보드로 학습용/평가용 Target 칸 분리 -> 일반화 보조 실험
 TARGET_MODE = "fixed"
 TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 이동 횟수(8방향)
-TARGET_DISTANCE_METRIC = "chebyshev"  # 후보 필터: 기존 기본값 유지, 논문 실험은 manhattan
+TARGET_DISTANCE_METRIC = "chebyshev"  # 후보 필터: 8방향 최단 이동 횟수, chebyshev만 지원(manhattan 거부)
 
 GRID_SIZES = (10, 20)
 GRID_ENV_SETTINGS = {
