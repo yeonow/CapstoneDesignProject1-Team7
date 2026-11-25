@@ -231,6 +231,17 @@ Random은 RSSI를 행동 선택에 쓰지 않으므로 두 모델에서 결과�
 Manhattan(385/193/192)으로 실행됐고 다시 실행하지 않았다. 이 문서의 정정 전 Manhattan smoke 기록도 그대로 둔다.
 Best Path 동작 확인은 임시 폴더에 2 Run, 학습 2, 평가 8로만 실행했으며 연구 결과가 아니다.
 
+### 3차 후속 정리
+
+- Best Path 기본 출력은 `results/best_paths_8dir/chebyshev_target/grid_20x20/`이다.
+  출력 폴더(`--output-dir` 포함)가 이미 있으면 설정 적용·학습·파일 기록 전에 `FileExistsError`로 중단한다.
+  과거 Manhattan 결과가 있는 `random_target/` 폴더는 이동·삭제·덮어쓰기 없이 보존한다.
+- Best Path 기본 횟수는 최종 논문 조건인 학습 3,000 Episode/Run, 평가 100 Episode/Run, 100 Run이다.
+  함수 기본 인자와 CLI 기본값이 같은 상수를 쓴다. 100 Run 전체 실험은 실행하지 않았다.
+- `split`은 최종 논문 조건(논문 명칭 Random Target)으로 설명한다. 이전 주석의 "random=본 실험,
+  split=보조 실험" 표현만 정정했으며 모드 동작과 전역 기본값 `TARGET_MODE="fixed"`는 그대로다.
+- `validate_target_config()`는 fixed를 포함한 모든 모드에서 `"chebyshev"` 외 거리 기준을 거부한다.
+
 ## 실행 방법
 
 분석 의존성은 기존 `experiments/field_measurement/analysis/requirements.txt`를 재사용한다.
@@ -308,3 +319,7 @@ Target/Seed 규칙 및 기존 results 파일은 diff가 없다.
 1ab9d52 Target 테스트 → 9a8a6d0 targets.py Chebyshev 전용 → eb621d6 config 주석 → f9f8b9f README →
 이 문서 커밋 순서로 저장했다. 작업 전 전체 389개, 이후 **391 passed**다.
 RSSI 수식/Euclidean 거리, 보정 코드/파라미터/프로필, 원본 CSV, Q-Learning/Random, Seed 규칙, 기존 results는 변경하지 않았다.
+
+3차 후속 정리는 471426b 이후 48618c4 기본 출력 경로 → cfab6a7 덮어쓰기 보호 → d7f6dc0 보호 테스트 →
+25fd131 Target 모드 설명 → 062e2ce 기본 횟수 → 2cf240a 기본 횟수 테스트 → 85384a3 모든 모드 거리 기준 검증 →
+7645c20 거리 기준 거부 테스트 → 2a269c4 README → 이 문서 커밋 순서다. 작업 전 391개, 이후 **409 passed**다.
