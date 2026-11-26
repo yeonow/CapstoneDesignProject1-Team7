@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import Mock, call, patch
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -158,6 +159,12 @@ def test_evaluate_agent_metrics():
     }
 
 
+@pytest.fixture
+def original_levels(monkeypatch):
+    # 아래 RSSI 값(-65/-61/-45 dBm)은 기존 Level 경계에서 서로 다른 State가 되도록 고른 값이다.
+    monkeypatch.setattr(config, "RSSI_LEVEL_MODE", "original")
+
+
 def _build_evaluation_integrity_case():
     env = experiment.build_environment()
     env.agent_start = (0, 0)
@@ -173,7 +180,7 @@ def _build_evaluation_integrity_case():
     return env, agent
 
 
-def test_evaluate_agent_preserves_epsilon():
+def test_evaluate_agent_preserves_epsilon(original_levels):
     """실제 학습된 Agent의 epsilon은 여러 평가 Episode 후에도 정확히 같다."""
     env, agent = _build_evaluation_integrity_case()
     epsilon_before = agent.epsilon
@@ -185,7 +192,7 @@ def test_evaluate_agent_preserves_epsilon():
     assert epsilon_before == agent.epsilon
 
 
-def test_evaluate_agent_preserves_q_table():
+def test_evaluate_agent_preserves_q_table(original_levels):
     """기존 Q-value뿐 아니라 처음 보는 State의 key도 평가 중 추가하지 않는다."""
     env, agent = _build_evaluation_integrity_case()
     q_table_before = deepcopy(agent.q_table)

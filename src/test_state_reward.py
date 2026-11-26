@@ -5,6 +5,7 @@ state_reward.py 단독 검증. `python test_state_reward.py` 로 실행.
 """
 
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -12,12 +13,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src import state_reward as sr
 
 
+@contextmanager
+def _original_levels():
+    """기존 Level 경계 [-80, -70, -60, -50] 검증용. 기본 RSSI_LEVEL_MODE는 calibrated_adjusted다."""
+    previous = sr.config.RSSI_LEVEL_MODE
+    sr.config.RSSI_LEVEL_MODE = "original"
+    try:
+        yield
+    finally:
+        sr.config.RSSI_LEVEL_MODE = previous
+
+
 def test_level_boundaries():
-    assert sr.get_rssi_level(-90) == 0
-    assert sr.get_rssi_level(-80) == 1     
-    assert sr.get_rssi_level(-65) == 2
-    assert sr.get_rssi_level(-50) == 4
-    assert sr.get_rssi_level(-30) == 4
+    with _original_levels():
+        assert sr.get_rssi_level(-90) == 0
+        assert sr.get_rssi_level(-80) == 1
+        assert sr.get_rssi_level(-65) == 2
+        assert sr.get_rssi_level(-50) == 4
+        assert sr.get_rssi_level(-30) == 4
 
 
 def test_level_monotonic():
@@ -34,10 +47,11 @@ def test_trend():
 
 
 def test_state_format():
-    state = sr.make_state(-65, None, sr.NONE_ACTION)
+    with _original_levels():
+        state = sr.make_state(-65, None, sr.NONE_ACTION)
     assert state == (2, 0, -1)
     assert isinstance(state, tuple)
-    hash(state)  
+    hash(state)
 
 def test_reward_order():
     up = sr.calculate_reward(-58, -65)

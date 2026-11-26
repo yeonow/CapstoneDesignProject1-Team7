@@ -116,8 +116,11 @@ def _config_snapshot():
     })
 
 
-def test_reward_combinations_start_with_independent_agents_and_equal_conditions(tmp_path):
+def test_reward_combinations_start_with_independent_agents_and_equal_conditions(tmp_path, monkeypatch):
     """실제 학습 후에도 다음 조합은 빈 Q-table과 초기 epsilon/seed로 시작한다."""
+    # 환경 물리값이 config의 Baseline 값과 같은지 확인하므로 Baseline 모델을 명시한다.
+    monkeypatch.setattr(experiment_sweep.config, "RSSI_MODEL", "baseline")
+    monkeypatch.setattr(experiment_sweep.config, "RSSI_LEVEL_MODE", "original")
     agents = []
     environments = []
     build_agent = experiment_sweep.build_agent

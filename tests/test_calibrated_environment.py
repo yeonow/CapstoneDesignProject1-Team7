@@ -16,6 +16,7 @@ def test_factory_selects_profile_without_changing_baseline(tmp_path, monkeypatch
     path = tmp_path / "profile.json"
     path.write_text(json.dumps(profile), encoding="utf-8")
     monkeypatch.setattr(config, "RSSI_CALIBRATION_FILE", path)
+    monkeypatch.setattr(config, "RSSI_MODEL", "baseline")  # 기본값은 calibrated이므로 명시 선택
     baseline = build_environment(noise_std=0)
     monkeypatch.setattr(config, "RSSI_MODEL", "calibrated")
     calibrated = build_environment(noise_std=0)
