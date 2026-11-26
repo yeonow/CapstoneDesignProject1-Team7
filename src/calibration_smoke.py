@@ -57,7 +57,7 @@ def run_smoke(profile_path, output_dir, train_episodes=10, eval_episodes=10):
                   TARGET_MODE="split", TARGET_MIN_DISTANCE=5, TARGET_DISTANCE_METRIC="chebyshev",
                   CHANNEL_STATE="los", CELL_SIZE_M=1.0, MIN_DISTANCE_M=1.0,
                   NOISE_FLOOR_DBM=profile["noise_floor_dbm"], NOISE_STD=2.0,
-                  RSSI_CALIBRATION_FILE=profile_path)
+                  RSSI_CALIBRATION_FILE=profile_path, RSSI_LEVEL_MODE="original")
     for mode in ("baseline", "calibrated"):
         with temporary_settings(**common, RSSI_MODEL=mode):
             manifest["settings"][mode] = {name: str(value) if isinstance(value, Path) else value

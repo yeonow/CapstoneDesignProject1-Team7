@@ -20,7 +20,7 @@ def paper_targets(monkeypatch):
     for name, value in {"GRID_SIZE": 20, "AGENT_START": (0, 0), "TARGET_POSITION": (19, 19),
                         "TARGET_MODE": "split", "TARGET_MIN_DISTANCE": 5,
                         "TARGET_DISTANCE_METRIC": "chebyshev", "MAX_STEPS": 8,
-                        "LOG_INTERVAL": 0,
+                        "LOG_INTERVAL": 0, "RSSI_LEVEL_MODE": "original",
                         "RSSI_CALIBRATION_FILE": DATA / "calibration_profile.json"}.items():
         monkeypatch.setattr(config, name, value)
     try:

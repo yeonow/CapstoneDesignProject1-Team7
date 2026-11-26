@@ -72,6 +72,10 @@ def save_best_path_results(result, directory, *, train_episodes, eval_episodes, 
             "CELL_SIZE_M", "MIN_DISTANCE_M", "CARRIER_FREQUENCY_HZ", "TX_POWER_DBM",
             "NOISE_FLOOR_DBM", "ETA_LOS", "ETA_NLOS", "PATH_LOSS_EXPONENT",
             "MULTIPATH_FADING", "CHANNEL_STATE")},
+        # 기본 RSSI 모델이 보정 모델이므로 위 Baseline 물리값과 함께 실제 선택한 모델을 기록한다.
+        "rssi_model": config.RSSI_MODEL, "rssi_level_mode": config.RSSI_LEVEL_MODE,
+        "rssi_calibration_file": (None if config.RSSI_CALIBRATION_FILE is None
+                                  else str(config.RSSI_CALIBRATION_FILE)),
     }
     summaries = []
     for algorithm, filename in (("q_learning", "q_learning_best"), ("random", "random_search_best")):

@@ -25,8 +25,10 @@ from src.random_agent import RandomAgent
 def small_config(monkeypatch):
     python_state, numpy_state = random.getstate(), np.random.get_state()
     for name, value in {
+        # 4×4 고정 Target, Baseline 물리값에서 Noise 비교 동작만 검증한다(기본값은 보정 모델/split).
         "GRID_SIZE": 4, "MAX_STEPS": 4, "AGENT_START": (0, 0),
-        "TARGET_POSITION": (3, 3), "NOISE_STD": 2.0,
+        "TARGET_POSITION": (3, 3), "TARGET_MODE": "fixed", "NOISE_STD": 2.0,
+        "RSSI_MODEL": "baseline", "RSSI_LEVEL_MODE": "original",
         "NUM_EVAL_EPISODES": 3, "LOG_INTERVAL": 0,
     }.items():
         monkeypatch.setattr(config, name, value)

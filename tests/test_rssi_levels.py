@@ -21,9 +21,15 @@ def calibrated(monkeypatch):
     monkeypatch.setattr(config, "RSSI_CALIBRATION_FILE", DATA / "calibration_profile.json")
 
 
-def test_default_settings_keep_original_thresholds():
+def test_default_settings_use_adjusted_levels_from_original_thresholds():
     assert config.RSSI_THRESHOLDS == ORIGINAL
-    assert config.RSSI_LEVEL_MODE == "original"
+    assert (config.RSSI_MODEL, config.RSSI_LEVEL_MODE) == ("calibrated", "calibrated_adjusted")
+    assert sr.rssi_thresholds() == DIAGNOSIS_ADJUSTED
+    assert sr.num_rssi_levels() == 5
+
+
+def test_original_mode_keeps_original_thresholds(monkeypatch):
+    monkeypatch.setattr(config, "RSSI_LEVEL_MODE", "original")
     assert sr.rssi_thresholds() == ORIGINAL
     assert sr.num_rssi_levels() == 5
     assert [sr.get_rssi_level(r) for r in (-90, -80, -75, -65, -55, -50, -30)] == [0, 1, 1, 2, 3, 4, 4]
@@ -58,14 +64,14 @@ def test_adjusted_thresholds_equal_the_diagnosis_values(calibrated, monkeypatch)
         assert mapping["intercept"] + mapping["slope"] * base == pytest.approx(cal, abs=1e-12)
 
 
-def test_calibrated_model_can_keep_original_levels(calibrated):
-    assert config.RSSI_LEVEL_MODE == "original"
+def test_calibrated_model_can_keep_original_levels(calibrated, monkeypatch):
+    monkeypatch.setattr(config, "RSSI_LEVEL_MODE", "original")
     assert sr.rssi_thresholds() == ORIGINAL
 
 
 def test_adjusted_levels_are_rejected_for_baseline_model(monkeypatch):
     monkeypatch.setattr(config, "RSSI_LEVEL_MODE", "calibrated_adjusted")
-    assert config.RSSI_MODEL == "baseline"
+    monkeypatch.setattr(config, "RSSI_MODEL", "baseline")
     with pytest.raises(ValueError, match="RSSI_MODEL='calibrated'"):
         sr.get_rssi_level(-65)
 

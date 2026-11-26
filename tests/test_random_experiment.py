@@ -39,6 +39,8 @@ def test_environment_uses_current_config(monkeypatch):
     }
     for name, value in settings.items():
         monkeypatch.setattr(config, name, value)
+    # 주파수/경로 손실 지수를 config에서 그대로 받는 것은 Baseline 모델이다(보정 모델은 프로필 값).
+    monkeypatch.setattr(config, "RSSI_MODEL", "baseline")
     env = experiment.build_environment()
     for name, value in settings.items():
         assert getattr(env, name.lower()) == value

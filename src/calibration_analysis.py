@@ -24,14 +24,17 @@ def json_write(path, value):
 
 
 def compare_curves(primary, profile, draws=500):
-    """기존 환경 자체로 noise-free 예측과 가정한 2dB 변동을 계산한다."""
-    if config.RSSI_MODEL != "baseline":
-        raise ValueError("Run analysis from baseline config to preserve a clear comparison")
+    """기존 환경 자체로 noise-free 예측과 가정한 2dB 변동을 계산한다.
+
+    기본 RSSI_MODEL과 관계없이 Baseline 모델 환경에서 시작해 두 곡선을 명확히 구분한다.
+    """
     if draws < 2:
         raise ValueError("At least two draws required")
     saved = random.getstate()
+    saved_model = config.RSSI_MODEL
     rows = []
     try:
+        config.RSSI_MODEL = "baseline"
         for mode in ("baseline", "calibrated"):
             env = build_environment(noise_std=0)
             env.grid_size = 21
@@ -58,6 +61,7 @@ def compare_curves(primary, profile, draws=500):
                              "assumed_noise_std_db": env.noise_std, "draws": draws})
     finally:
         random.setstate(saved)
+        config.RSSI_MODEL = saved_model
     return rows
 
 

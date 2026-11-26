@@ -33,8 +33,9 @@ BLOCKED_PENALTY = 0.0            # 막힌 Action에 추가로 주는 penalty (0 
 # Environment Parameters
 # =========================
 
-GRID_SIZE = 10
-MAX_STEPS = 100
+# 기본 실행 환경은 최종 실측 보정 실험 조건이다(20×20, 400 Step, split, 보정 RSSI + 조정 Level).
+GRID_SIZE = 20
+MAX_STEPS = 400
 
 # Grid 크기별 비교 실험(src.compare_grid_sizes)에서 사용할 환경 설정
 # 시작 위치는 AGENT_START로 같고, Target은 반대쪽 모서리에 둔다.
@@ -46,8 +47,8 @@ MAX_STEPS = 100
 # "split": Episode마다 무작위 Target, 2×2 블록 체커보드로 학습용/평가용 후보 분리
 #          -> 최종 논문 조건(논문 명칭 Random Target): 20×20, Chebyshev ≥ 5,
 #             후보 375개 = 학습 187개 + 평가 188개
-# 전역 기본값 fixed는 유지하며, 논문 조건으로 실행할 때 split을 지정한다(예: src.best_paths_experiment).
-TARGET_MODE = "fixed"
+# 기본값은 split이다. fixed/random은 필요한 실험에서 명시적으로 지정한다.
+TARGET_MODE = "split"
 TARGET_MIN_DISTANCE = 5         # 시작 위치에서 Target까지 최소 이동 횟수(8방향)
 TARGET_DISTANCE_METRIC = "chebyshev"  # 후보 필터: 8방향 최단 이동 횟수, chebyshev만 지원(manhattan 거부)
 
@@ -82,13 +83,12 @@ NONE_ACTION = -1
 # Simulation Parameters
 # =========================
 
-# Simulation용 임시값
-# 실제 RSSI 측정 후 보정 예정
 AGENT_START = (0, 0)
-TARGET_POSITION = (9, 9)
+TARGET_POSITION = (19, 19)       # fixed 모드에서만 쓰는 Target. split/random은 후보에서 선택
 
-# 논문 식 (2)의 물리 파라미터를 조절하기 위한 Simulation용 임시값이다.
-# 실제 Wi-Fi 실측값이 아니며 Raspberry Pi + Wi-Fi Adapter 측정 후 보정한다.
+# 논문 식 (2)의 Baseline 물리 파라미터(Simulation용 가정값, 실측값 아님)다.
+# 기본 RSSI_MODEL="calibrated"는 보정 프로필의 경로 손실 지수/주파수/1m 기준 수신 전력을 쓰지만,
+# 아래 값은 RSSI_MODEL="baseline" 선택과 조정 Level 변환(Baseline 기준 RSSI 계산)에 필요하므로 유지한다.
 CELL_SIZE_M = 1.0               # Grid 한 칸을 실제 거리 1 m로 가정 -> 나중에 더 크게 하거나 해야 됨
 MIN_DISTANCE_M = 1.0             
 CARRIER_FREQUENCY_HZ = 2.4e9    # 2.4 GHz Wi-Fi를 가정한 값(스마트폰 Hotspot이 5 GHz를 쓰면: 5e9 로 수정)
@@ -103,25 +103,28 @@ PATH_LOSS_EXPONENT = 2.0        # κ: 자유공간에 가까운 거리 감쇠를
 MULTIPATH_FADING = 1.0          # nu: 현재 고정 진폭 계수, 1이면 추가 multipath 영향 없음
 NOISE_STD = 2.0                 # omega: Gaussian shadow fading의 표준편차(dB)
 
-# RSSI Level 경계(dBm). Baseline과 제출 논문 결과에 쓴 기존 경계다.
+# RSSI Level 경계(dBm). Baseline과 제출 논문 결과에 쓴 기존 경계이며,
+# 조정 Level(calibrated_adjusted)은 이 값을 변환해 만든다. 값을 바꾸지 않는다.
 RSSI_THRESHOLDS = [-80.0, -70.0, -60.0, -50.0]
 # Level 경계 선택 (src/state_reward.rssi_thresholds). "original": RSSI_THRESHOLDS를 그대로 사용
-# "calibrated_adjusted": RSSI_MODEL="calibrated" 전용. 기존 경계를 Baseline/Calibrated의
-#   1m·15m noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py). 종프 최종 발표용 추가 개선.
-RSSI_LEVEL_MODE = "original"
+# "calibrated_adjusted"(기본): RSSI_MODEL="calibrated" 전용. 기존 경계를 Baseline/Calibrated의
+#   1m·15m noise-free RSSI 선형 대응으로 옮긴 경계(src/rssi_levels.py)
+#   = [-89.05, -81.26, -73.47, -65.68] dBm
+RSSI_LEVEL_MODE = "calibrated_adjusted"
 CHANNEL_STATE = "los"           # 향후 동적 LoS/NLoS 모델로 확장; 이동 blocked와 무관
 
-# 기존 논문 모드는 기본값으로 보존한다. 보정 사용 시 분석에서 저장한 JSON을 명시한다.
+# 기본 RSSI 모델은 실측 보정 모델이다(1m 기준 수신 전력 약 -60.279 dBm, 경로 손실 지수 약 1.584).
+# 제출 논문 조건은 RSSI_MODEL="baseline", RSSI_LEVEL_MODE="original"로 선택한다.
 # 실측 반복 SD를 공간적 shadow fading으로 대체하지 않으므로 NOISE_STD는 그대로 유지한다.
-RSSI_MODEL = "baseline"          # "baseline" 또는 "calibrated"
-RSSI_CALIBRATION_FILE = None
+RSSI_MODEL = "calibrated"        # "baseline" 또는 "calibrated"
+RSSI_CALIBRATION_FILE = "data/rssi_calibration_20261125/calibration_profile.json"
 
 
 # =========================
 # Experiment Parameters
 # =========================
 
-NUM_EPISODES = 500
+NUM_EPISODES = 3000
 NUM_EVAL_EPISODES = 100
 LOG_INTERVAL = 50
 RANDOM_SEED = 42

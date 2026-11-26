@@ -40,6 +40,9 @@ def test_presentation_split_validation_restores_config(monkeypatch):
 def test_actual_paths_reproduce_and_leave_standard_comparison_intact(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_INTERVAL", 0)
     monkeypatch.setattr(config, "TARGET_MODE", "split")
+    # 아래 기대 결과(공동 성공 없음 등)는 Baseline 모델과 기존 Level에서 얻은 값이다.
+    monkeypatch.setattr(config, "RSSI_MODEL", "baseline")
+    monkeypatch.setattr(config, "RSSI_LEVEL_MODE", "original")
     kwargs = dict(train_episodes=2, eval_episodes=8, runs=2, seed=42)
     baseline_directory = tmp_path / "baseline"
     baseline = comparison.compare_algorithms(**kwargs, output_dir=baseline_directory)

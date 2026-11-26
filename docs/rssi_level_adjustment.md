@@ -26,7 +26,9 @@
 | `calibrated_adjusted` | `calibrated` | `calibrated_adjusted` | -89.04901890526463, -81.25897503062048, -73.46893115597632, -65.67888728133218 |
 
 `calibrated_adjusted`는 Calibrated 모델 전용이다. Baseline 모델에서 선택하면 오류로 중단한다.
-기본값은 `RSSI_MODEL = "baseline"`, `RSSI_LEVEL_MODE = "original"`이므로 기존 실험은 그대로 재현된다.
+현재 `config.py` 기본값은 `RSSI_MODEL = "calibrated"`, `RSSI_LEVEL_MODE = "calibrated_adjusted"`이다
+(팀 최종 실측 보정 실험 완료 후 기본 실행 환경으로 변경). 기존 논문 조건은
+`RSSI_MODEL = "baseline"`, `RSSI_LEVEL_MODE = "original"`을 함께 지정하면 그대로 재현된다.
 
 ## 조정 경계 계산 (`src/rssi_levels.py`)
 

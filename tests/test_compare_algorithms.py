@@ -22,7 +22,9 @@ def small_config(monkeypatch):
     python_state = random.getstate()
     numpy_state = np.random.get_state()
     for name, value in {
-        "GRID_SIZE": 4, "AGENT_START": (0, 0), "TARGET_POSITION": (3, 3),
+        # 4×4 고정 Target, Baseline 물리값에서 알고리즘 동작만 검증한다(기본값은 보정 모델/split).
+        "GRID_SIZE": 4, "AGENT_START": (0, 0), "TARGET_POSITION": (3, 3), "TARGET_MODE": "fixed",
+        "RSSI_MODEL": "baseline", "RSSI_LEVEL_MODE": "original",
         "MAX_STEPS": 6, "NOISE_STD": 2.0, "NUM_EPISODES": 3,
         "NUM_EVAL_EPISODES": 3, "RANDOM_SEED": 42, "LOG_INTERVAL": 0,
     }.items():
