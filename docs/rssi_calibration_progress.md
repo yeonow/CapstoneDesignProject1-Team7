@@ -276,6 +276,10 @@ smoke 명령은 현재 Chebyshev 후보 기준으로 실행된다. 정정 후 �
 
 같은 Python 프로세스에서 학습 전에 지정한다. Baseline 복귀 시 RSSI_MODEL만 baseline으로 지정한다.
 
+> 현재 기준: 이후 `config.py` 기본값이 보정 모델(`RSSI_MODEL="calibrated"`, 아래 프로필)과
+> 조정 Level(`RSSI_LEVEL_MODE="calibrated_adjusted"`)로 바뀌었다. 아래 지정은 더 이상 필요 없으며,
+> Baseline으로 돌아갈 때는 `RSSI_MODEL="baseline"`과 `RSSI_LEVEL_MODE="original"`을 함께 지정한다.
+
 ```python
 import config
 config.RSSI_MODEL = "calibrated"

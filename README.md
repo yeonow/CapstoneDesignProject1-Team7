@@ -1,6 +1,24 @@
 # CapstoneDesignProject1-Team7
 
 [Raspberry Pi RSSI 실측 실험 안내](experiments/field_measurement/README.md)
+
+## 기본 실행 환경: 실측 보정 환경
+
+`config.py`의 기본값은 최종 실측 보정 실험 조건입니다. 별도 설정 없이 실행하는 모든 실험
+(`compare_algorithms`, Best Path, 발표용 경로 등)에 적용됩니다.
+
+| 항목 | 기본값 |
+|---|---|
+| Grid / 시작 / 최대 Step | 20×20, (0, 0), 400 Step |
+| Target | `split`(논문 명칭 Random Target), 체비쇼프 거리 ≥ 5, 학습 187개 / 평가 188개 |
+| RSSI 모델 | `RSSI_MODEL = "calibrated"` (`data/rssi_calibration_20261125/calibration_profile.json`: 1m 기준 수신 전력 약 -60.279 dBm, 경로 손실 지수 약 1.584) |
+| RSSI Level | `RSSI_LEVEL_MODE = "calibrated_adjusted"`: -89.05, -81.26, -73.47, -65.68 dBm |
+| 학습 / 평가 | 3,000 Episode / 100 Episode, Noise 표준편차 2 dB |
+
+제출한 논문 조건(Baseline RSSI 모델과 기존 Level `[-80, -70, -60, -50]` dBm)은
+`RSSI_MODEL = "baseline"`, `RSSI_LEVEL_MODE = "original"`을 함께 지정해 실행합니다.
+`PATH_LOSS_EXPONENT = 2.0`과 `RSSI_THRESHOLDS`는 Baseline 모델과 조정 Level 계산의 기준값이므로 유지합니다.
+
 ## 논문 조건: 8방향 Best Path
 
 프로젝트 루트에서 다음 명령으로 전체 실험을 재현합니다.
@@ -13,6 +31,8 @@ python -m src.best_paths_experiment
 Run당 Q-Learning 3,000 Episode 학습 및 100 Episode 평가, 독립 100 Runs, 최대 400 Step,
 Gaussian Noise 표준편차 2 dB를 사용합니다. 각 Run에서 새 정책을 학습하고 greedy 평가합니다.
 기존 Random Search의 8방향 균등 무작위 행동은 유지합니다.
+RSSI 모델과 Level은 config 기본값(실측 보정 모델 + 조정 Level)을 따르며 JSON의
+`rssi_model`, `rssi_level_mode`에 기록합니다.
 
 Target 후보에는 시작점 기준 **체비쇼프 거리 ≥ 5**를 적용하여 375개를 만들고 2×2 블록 체커보드로
 학습 187개/평가 188개로 나눕니다. 경로 최단 Step도 같은 **체비쇼프 거리**이며,
