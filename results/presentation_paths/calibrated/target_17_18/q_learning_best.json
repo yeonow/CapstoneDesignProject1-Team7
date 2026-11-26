@@ -1,0 +1,199 @@
+{
+  "train_target_count": 187,
+  "eval_target_count": 188,
+  "purpose": "presentation",
+  "grid_size": 20,
+  "start_position": [
+    0,
+    0
+  ],
+  "target_position": [
+    17,
+    18
+  ],
+  "target_mode": "split",
+  "target_min_distance": 5,
+  "target_distance_metric": "chebyshev",
+  "actions": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "noise_std": 2.0,
+  "max_steps": 400,
+  "shortest_path_steps": 18,
+  "seed": 42,
+  "runs": 30,
+  "train_episodes": 3000,
+  "eval_episodes_per_run": 100,
+  "algorithm": "q_learning",
+  "selection": "independent_best",
+  "selection_rule": "minimum (path_ratio, steps, run, episode) among successes",
+  "status": "selected",
+  "trajectory": {
+    "episode": 91,
+    "success": true,
+    "steps": 32,
+    "final_distance": 0.0,
+    "target_x": 17,
+    "target_y": 18,
+    "shortest_path_steps": 18,
+    "start_position": [
+      0,
+      0
+    ],
+    "target_position": [
+      17,
+      18
+    ],
+    "grid_size": 20,
+    "path": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        6,
+        3
+      ],
+      [
+        6,
+        4
+      ],
+      [
+        7,
+        4
+      ],
+      [
+        8,
+        5
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        9,
+        5
+      ],
+      [
+        10,
+        6
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        11,
+        9
+      ],
+      [
+        12,
+        10
+      ],
+      [
+        12,
+        11
+      ],
+      [
+        13,
+        12
+      ],
+      [
+        13,
+        13
+      ],
+      [
+        14,
+        13
+      ],
+      [
+        15,
+        14
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        14,
+        16
+      ],
+      [
+        15,
+        17
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        17,
+        16
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        17,
+        18
+      ]
+    ],
+    "path_ratio": 1.7777777777777777,
+    "noise_std": 2.0,
+    "blocked_move_count": 0,
+    "algorithm": "q_learning",
+    "run": 10,
+    "train_seed": 60,
+    "eval_seed": 61,
+    "target_mode": "split",
+    "noise_seed": "61:91"
+  }
+}
