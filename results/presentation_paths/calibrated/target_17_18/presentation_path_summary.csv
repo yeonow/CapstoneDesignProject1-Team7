@@ -1,0 +1,3 @@
+Algorithm,Target,Run,Episode,Train Seed,Eval Seed,Success,Actual Steps,Shortest Steps,Path Ratio,Blocked Moves
+Q-Learning,"(17, 18)",10,91,60,61,True,32,18,1.7777777777777777,0
+Random Search,"(17, 18)",1,14,42,43,True,51,18,2.8333333333333335,9
